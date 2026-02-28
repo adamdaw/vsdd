@@ -29,25 +29,47 @@ VSDD treats these not as competing philosophies but as **sequential gates** in a
 
 #### **Phase 1 — Spec Crystallization**
 
-*Nothing gets built until the contract is airtight.*
+*Nothing gets built until the contract is airtight — and the architecture is verification-ready by design.*
 
-The human developer describes the feature intent to the Builder. The Builder then produces a **formal specification document** for each unit of work, containing:
+The human developer describes the feature intent to the Builder. The Builder then produces a **formal specification document** for each unit of work. Critically, this phase doesn't just define *what* the software does — it defines *what must be provable about it* and structures the architecture accordingly.
+
+**Step 1a: Behavioral Specification**
+
+The Builder produces the functional contract:
 
 - **Behavioral Contract:** What the module/function/endpoint *must* do, expressed as preconditions, postconditions, and invariants.
 - **Interface Definition:** Input types, output types, error types. No ambiguity. If it's an API, this is the OpenAPI/GraphQL schema. If it's a module, this is the type signature and doc contract.
 - **Edge Case Catalog:** Explicitly enumerated boundary conditions, degenerate inputs, and failure modes. The Builder is prompted to be *exhaustive* here — "What happens when the input is null? Empty? Maximum size? Negative? Unicode? Concurrent?"
 - **Non-Functional Requirements:** Performance bounds, memory constraints, security considerations baked into the spec itself.
 
-**Spec Review Gate:** The spec is reviewed by *both* the human and the Adversary before any tests are written. Sarcasmotron tears into the spec looking for:
+**Step 1b: Verification Architecture**
+
+Before any implementation design is finalized, the Builder produces a **Verification Strategy** that answers: *"What properties of this system must be mathematically provable, and what architectural constraints does that impose?"*
+
+This includes:
+
+- **Provable Properties Catalog:** Which invariants, safety properties, and correctness guarantees must be formally verified — not just tested? Examples: "This state machine can never reach an invalid state." "This arithmetic can never overflow." "This parser always terminates." "This access control check is never bypassed." The Builder distinguishes between properties that *should* be proven (critical path, security boundaries, financial calculations) and properties where test coverage is sufficient (UI formatting, logging, non-critical defaults).
+- **Purity Boundary Map:** A clear architectural separation between the **deterministic, side-effect-free core** (where formal verification can operate) and the **effectful shell** (I/O, network, database, user interaction). This is the most consequential design decision in VSDD — it dictates module boundaries, dependency direction, and how state flows through the system. The pure core must be designed so that verification tools can reason about it without mocking the entire universe.
+- **Verification Tooling Selection:** Based on the language and the properties to be proven, the Builder selects the appropriate formal verification stack (Kani for Rust, CBMC for C/C++, Dafny, TLA+ for distributed systems, etc.) and identifies any constraints these tools impose on code structure. This happens *now*, not after the code is written, because tool constraints are architectural constraints.
+- **Property Specifications:** Where possible, the Builder drafts the actual formal property definitions (e.g., Kani proof harnesses, Dafny contracts, TLA+ invariants) alongside the behavioral spec. These aren't implementation — they're the formal expression of what the spec already says in natural language. They serve as a second, mathematically precise encoding of the requirements.
+
+**Why this must happen in Phase 1:** If the system is designed with side effects woven through the core logic, no amount of Phase 5 heroics will make it verifiable. A function that reads from a database, performs a calculation, and writes to a log in one block cannot be formally verified without mocking infrastructure that the verifier may not support. But a function that takes data in, returns a result, and lets the caller handle persistence — that's a function a model checker can reason about. This boundary must be drawn at the spec level because it fundamentally shapes the module decomposition, the dependency graph, and the testing strategy that follows.
+
+**Step 1c: Spec Review Gate**
+
+The complete spec — behavioral contracts *and* verification architecture — is reviewed by *both* the human and the Adversary before any tests are written. Sarcasmotron tears into the spec looking for:
 
 - Ambiguous language that could be interpreted multiple ways
 - Missing edge cases
 - Implicit assumptions that aren't stated
 - Contradictions between different parts of the spec
+- **Properties claimed as "testable only" that should be provable** (the Adversary pushes back on lazy verification boundaries)
+- **Purity boundary violations** — logic marked as "pure core" that actually depends on external state
+- **Verification tool mismatches** — properties the selected tooling can't actually prove
 
-The spec is iterated until the Adversary can't find legitimate holes.
+The spec is iterated until the Adversary can't find legitimate holes in either the behavioral contract or the verification strategy.
 
-**Chainlink Integration:** Each spec maps to a Chainlink Issue. Sub-issues are generated for each behavioral contract item, edge case, and non-functional requirement.
+**Chainlink Integration:** Each spec maps to a Chainlink Issue. Sub-issues are generated for each behavioral contract item, edge case, non-functional requirement, *and* each formally provable property. The provable properties get their own bead chain so their status is tracked independently from test coverage.
 
 ---
 
@@ -118,14 +140,15 @@ This loop continues until convergence (see Phase 6).
 
 ---
 
-#### **Phase 5 — Formal Hardening**
+#### **Phase 5 — Formal Hardening (Executing the Verification Plan)**
 
-As the adversarial loop tightens, the methodology escalates to mathematical verification:
+The verification architecture designed in Phase 1b is now *executed* against the battle-tested implementation. Because the codebase was architected from the start with a pure core and clear purity boundaries, formal verification tools can operate on it without heroic refactoring.
 
-- **Model Checking & Symbolic Execution:** Tools like **Kani** (Rust), **CBMC** (C/C++), or **Dafny** are integrated to *prove* properties the test suite can only *suggest*. Memory safety, arithmetic correctness, and state machine invariants are mathematically guaranteed.
-- **Fuzz Testing:** Structured fuzzing (AFL++, libFuzzer, cargo-fuzz) is layered on top of property-based tests to find inputs that no human or AI anticipated.
+- **Proof Execution:** The property specifications drafted in Phase 1b (Kani harnesses, Dafny contracts, TLA+ invariants, etc.) are run against the implementation. Because the architecture was designed for verifiability, these proofs should engage cleanly with the pure core. Failures here indicate either implementation bugs or spec properties that need refinement — both feed back through Phase 4.
+- **Fuzz Testing:** Structured fuzzing (AFL++, libFuzzer, cargo-fuzz) is layered on top of property-based tests to find inputs that no human or AI anticipated. The deterministic core is an ideal fuzz target because it has no environmental dependencies to mock.
 - **Security Hardening:** Suites like **Wycheproof** (cryptographic edge cases) and **Semgrep** (static analysis) are run as CI/CD gates.
 - **Mutation Testing:** Tools like **mutmut** or **Stryker** mutate the code to verify the test suite actually catches real bugs. If a mutation survives, the test suite has a gap.
+- **Purity Boundary Audit:** A final check that the purity boundaries defined in Phase 1b have been respected throughout implementation. Any side effects that crept into the pure core during development are flagged and refactored out.
 
 All formal verification and fuzzing results feed back into Phase 4 if issues are found.
 
@@ -137,11 +160,12 @@ VSDD inherits VDD's **hallucination-based termination**, extended across all thr
 
 | Dimension | Convergence Signal |
 | --- | --- |
-| **Spec** | The Adversary's spec critiques are nitpicks about wording, not about missing behavior or ambiguity. |
+| **Spec** | The Adversary's spec critiques are nitpicks about wording, not about missing behavior, ambiguity, or verification gaps. |
 | **Tests** | The Adversary can't identify a meaningful untested scenario. Mutation testing confirms high kill rate. |
-| **Implementation** | The Adversary is forced to invent problems that don't exist in the code. Formal verifiers pass. Fuzzers find nothing. |
+| **Implementation** | The Adversary is forced to invent problems that don't exist in the code. |
+| **Verification** | All properties from the Phase 1b catalog pass formal proof. Fuzzers find nothing. Purity boundaries are intact. |
 
-**Maximum Viable Refinement** is reached when all three dimensions have converged. The software is considered **Zero-Slop** — every line of code traces to a spec requirement, is covered by a test, and has survived adversarial scrutiny.
+**Maximum Viable Refinement** is reached when all four dimensions have converged. The software is considered **Zero-Slop** — every line of code traces to a spec requirement, is covered by a test, has survived adversarial scrutiny, and the critical path is formally proven.
 
 ---
 
@@ -150,10 +174,10 @@ VSDD inherits VDD's **hallucination-based termination**, extended across all thr
 One of VSDD's defining properties is **full traceability**. Every artifact links back:
 
 ```
-Spec Requirement → Chainlink Bead → Test Case → Implementation → Adversarial Review → Formal Proof
+Spec Requirement → Verification Property → Chainlink Bead → Test Case → Implementation → Adversarial Review → Formal Proof
 ```
 
-At any point, you can ask: *"Why does this line of code exist?"* and trace it all the way back to a specific spec requirement, through the test that demanded it, the adversarial review that hardened it, and (optionally) the formal proof that guarantees it.
+At any point, you can ask: *"Why does this line of code exist?"* and trace it all the way back to a specific spec requirement, through the verification property it satisfies, the test that demanded it, the adversarial review that hardened it, and the formal proof that guarantees it. Equally, you can ask *"Why is this module structured as a pure function?"* and trace that decision back to the Purity Boundary Map in Phase 1b.
 
 ---
 
@@ -161,7 +185,9 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 
 1. **Spec Supremacy:** The spec is the highest authority below the human developer. Tests serve the spec. Code serves the tests. Nothing exists without a reason traced to the spec.
 
-2. **Red Before Green:** No implementation code is written until a failing test demands it. AI models are explicitly constrained to follow TDD discipline — no "let me just write the whole thing and add tests after."
+2. **Verification-First Architecture:** The need for formal provability shapes the design, not the other way around. Pure core, effectful shell. If you can't verify it, you architected it wrong — and you find that out in Phase 1, not Phase 5.
+
+3. **Red Before Green:** No implementation code is written until a failing test demands it. AI models are explicitly constrained to follow TDD discipline — no "let me just write the whole thing and add tests after."
 
 3. **Anti-Slop Bias:** The first "correct" version is assumed to contain hidden debt. Trust is earned through adversarial survival, not initial appearance.
 
@@ -171,7 +197,7 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 
 6. **Entropy Resistance:** Context resets on every adversarial pass prevent the natural degradation of long-running AI conversations.
 
-7. **Three-Dimensional Convergence:** The system isn't done until specs, tests, *and* implementation have all independently survived adversarial review.
+7. **Four-Dimensional Convergence:** The system isn't done until specs, tests, implementation, *and* formal proofs have all independently survived adversarial review.
 
 ---
 
