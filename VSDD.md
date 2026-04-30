@@ -76,7 +76,9 @@ No prior relationship with the artifact — fresh context on every invocation, n
 Receives the artifact under review (spec, PR diff, or codebase section) — nothing else. Does *not* receive: the history of prior reviews, the Builder's intent, the Architect's reasoning, or any framing that might soften the critique. The absence of prior context is a feature: it simulates the hostile reader, the future maintainer with no institutional memory, and the production incident investigator.
 
 **Curation**
-Scans for: completeness gaps, measurability failures, internal contradictions, invisible assumptions, and failure path omissions. For PRs specifically: documentation currency, test coverage, traceability (does this change trace to a spec requirement?), and process property adherence (branch used, CI green, docs updated). Does *not* curate for style preferences or non-falsifiable opinions.
+Scans for: completeness gaps, measurability failures, internal contradictions, invisible assumptions, and failure path omissions. For PRs specifically: documentation currency, test coverage, traceability (does this change trace to a spec requirement?), process property adherence (branch used, CI green, docs updated), and **over-editing** — changes that exceed the scope of the fix. Does *not* curate for style preferences or non-falsifiable opinions.
+
+*Over-editing defined:* a change over-edits when it modifies code beyond what the fix strictly requires — renaming variables, adding validation, restructuring logic, introducing new nesting or control flow. Every line changed that was not broken is an unrequested change and a review burden. The Adversary flags it with: `[Location]: change exceeds fix scope → revert unrequested modifications`.
 
 **Conceptualization**
 Frames every review as: *"What would break, be misunderstood, or be unprovable about this artifact in the hands of someone with no context?"* Represents the hostile auditor and the future maintainer simultaneously.
@@ -245,6 +247,7 @@ VSDD inherits VDD's **hallucination-based termination**, extended across all thr
 | **Tests** | The Adversary can't identify a meaningful untested scenario. Mutation testing confirms high kill rate. |
 | **Implementation** | The Adversary is forced to invent problems that don't exist in the code. |
 | **Verification** | All properties from the Phase 1b catalog pass formal proof. Fuzzers find nothing. Purity boundaries are intact. |
+| **Edit minimality** | No unrequested structural changes — no nesting, branching, or control flow introduced beyond what each fix required. Diff scope matches work item scope. |
 
 **Maximum Viable Refinement** is reached when all four dimensions have converged. The software is considered **Zero-Slop** — every line of code traces to a spec requirement, is covered by a test, has survived adversarial scrutiny, and the critical path is formally proven.
 
