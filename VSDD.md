@@ -20,12 +20,92 @@ VSDD treats these not as competing philosophies but as **sequential gates** in a
 | --- | --- | --- |
 | **The Architect** | Human Developer | Strategic vision, domain expertise, acceptance authority. Signs off on specs, arbitrates disputes between Builder and Adversary. |
 | **The Builder** | Claude (or similar) | Spec authorship, test generation, code implementation, and refactoring. Operates under strict TDD constraints. |
-| **The Tracker** | **Chainlink** | Hierarchical issue decomposition — Epics → Issues → Sub-issues ("beads"). Every spec, test, and implementation maps to a bead. |
-| **The Adversary** | **Sarcasmotron** (Gemini Gem or equivalent) | Hyper-critical reviewer with zero patience. Reviews specs, tests, *and* implementation. Fresh context on every pass. |
+| **The Tracker** | AI agent or issue system | Hierarchical issue decomposition — Epics → Issues → Sub-issues. Every spec, test, and implementation maps to a work item. |
+| **The Adversary** | AI agent (fresh context) | Hyper-critical reviewer with zero tolerance. Reviews specs, tests, *and* implementation. Fresh context on every pass. |
 
 ---
 
-### **II. The VSDD Pipeline**
+### **II. Agent Roles — 5Cs Characterisation**
+
+Each VSDD agent role is defined through the five dimensions that govern effective AI collaboration: **Constraints, Context, Curation, Conceptualization, Creativity**.
+
+#### The Architect *(human developer)*
+
+**Constraints**
+Final authority in the pipeline. Cannot delegate: scope decisions, quality goal definitions, ADR approval, or the convergence declaration. Bound by real-world constraints (regulatory, budget, team capacity). Must never accept a passing adversarial review as a substitute for their own judgment.
+
+**Context**
+Needs: business requirements, stakeholder expectations, and the converged spec. Does *not* need implementation details or intermediate builder outputs — only final artifacts. Fresh context for each major decision prevents anchoring bias.
+
+**Curation**
+Selects which Adversary findings require spec revision versus which are acceptable risks to carry. Filters builder escalations: answers only what genuinely requires human judgment; delegates the rest back.
+
+**Conceptualization**
+Frames the problem as: *"What must be provably true about this system for it to be worth building?"* Thinks in quality goals, not implementation choices. Holds the tension between ideal and achievable.
+
+**Creativity**
+The only creativity in the pipeline that shapes the outcome. Generates the problem framing, the quality goals, and the decision to accept or reject convergence. The Architect's judgment is the irreducible human contribution.
+
+---
+
+#### The Builder *(Claude or equivalent AI)*
+
+**Constraints**
+Scope-bound to the spec — implements only what the spec authorises. Cannot make architectural decisions; surfaces ambiguities to the Architect rather than resolving them unilaterally. No implementation code without a prior failing test. No commits to main; all work on branches with a PR required. Output authority is limited to: implementation, tests, and documentation updates.
+
+**Context**
+Needs: the converged spec, the test suite, and the current work item. Does *not* need stakeholder conversation history, prior failed approaches (anchors on wrong paths), or the Adversary's full review history. Fresh context per session is recommended to prevent accumulated bias.
+
+**Curation**
+From the spec: extracts only the requirements relevant to the current work item. From the test suite: identifies the specific failing test to satisfy. Filters out everything outside the current work item's scope — no opportunistic additions.
+
+**Conceptualization**
+Frames every task as: *"What is the minimal implementation that makes this test pass?"* Red-green-refactor, not "build the feature." Every line of code is a response to a specific test, which is a response to a specific spec requirement.
+
+**Creativity**
+Narrow and bounded: algorithm choice, code structure, naming — all within the spec's constraints. When implementation choices diverge due to genuine spec ambiguity, the Builder surfaces the decision to the Architect rather than choosing. The Builder's creativity is craft, not direction.
+
+---
+
+#### The Adversary *(AI agent, fresh context)*
+
+**Constraints**
+No prior relationship with the artifact — fresh context on every invocation, no accumulated goodwill. Cannot pass what doesn't meet the standard; "mostly good" is not a pass. Output format is non-negotiable: `[Location — Topic]: <concrete flaw> → <proposed correction>`. No preamble, no praise, no softening — the first word is the first flaw. If genuinely no flaws exist: exactly *"Forced to manufacture flaws. Document meets standard."* — nothing more. **Standing gate:** invoked on every PR before merge, not only at spec completion. Cannot approve its own prior suggestions — each review is independent.
+
+**Context**
+Receives the artifact under review (spec, PR diff, or codebase section) — nothing else. Does *not* receive: the history of prior reviews, the Builder's intent, the Architect's reasoning, or any framing that might soften the critique. The absence of prior context is a feature: it simulates the hostile reader, the future maintainer with no institutional memory, and the production incident investigator.
+
+**Curation**
+Scans for: completeness gaps, measurability failures, internal contradictions, invisible assumptions, and failure path omissions. For PRs specifically: documentation currency, test coverage, traceability (does this change trace to a spec requirement?), and process property adherence (branch used, CI green, docs updated). Does *not* curate for style preferences or non-falsifiable opinions.
+
+**Conceptualization**
+Frames every review as: *"What would break, be misunderstood, or be unprovable about this artifact in the hands of someone with no context?"* Represents the hostile auditor and the future maintainer simultaneously.
+
+**Creativity**
+Tightly constrained by design. The closest analogue is the ability to surface non-obvious failure modes — two correct-looking pieces whose interaction produces an incorrect whole. Generating *"Forced to manufacture flaws"* honestly is the hardest output: it requires genuine judgment that the standard has been met, not that review fatigue has set in.
+
+---
+
+#### The Tracker *(AI agent or issue system)*
+
+**Constraints**
+Cannot invent requirements — every work item traces to a spec requirement. Cannot approve implementation; that is the Adversary's gate. Scope is issue decomposition and traceability only; no architectural judgment. Must maintain the full chain: Spec Requirement → Quality Scenario → Work Item → Test Case → Implementation. In team contexts, integrates with whatever issue tracking system the team uses — does not replace it.
+
+**Context**
+Needs: the converged spec, the current implementation state, and the test suite. Does *not* need the Adversary's review history or architectural decision rationale — only the decisions themselves. In team contexts, also needs the current sprint and backlog state from the team's issue tracker.
+
+**Curation**
+Extracts atomic, independently testable units of work from the spec. Prioritises work items that unblock other work items — decomposition is dependency-aware. Flags work items where the spec is insufficiently specific to enable a test, surfacing the gap to the Architect rather than the Builder.
+
+**Conceptualization**
+Frames every task as: *"What is the smallest unit of work that is independently testable and traceable to the spec?"* The Tracker's mental model is the dependency graph, not the feature list. A well-decomposed backlog where every work item is atomic, testable, and traceable is the Tracker's convergence signal.
+
+**Creativity**
+Different decomposition strategies carry different risk profiles when spec changes arrive. The Tracker's creativity is in finding the slice that minimises rework. It also flags when decomposition reveals that two apparently separate work items are actually coupled — which is a spec gap requiring Architect attention, not a Builder workaround.
+
+---
+
+### **III. The VSDD Pipeline**
 
 #### **Phase 1 — Spec Crystallization**
 
@@ -33,31 +113,31 @@ VSDD treats these not as competing philosophies but as **sequential gates** in a
 
 The human developer describes the feature intent to the Builder. The Builder then produces a **formal specification document** for each unit of work. Critically, this phase doesn't just define *what* the software does — it defines *what must be provable about it* and structures the architecture accordingly.
 
-**Step 1a: Behavioral Specification**
+**Step 1a: Behavioural Specification**
 
 The Builder produces the functional contract:
 
-- **Behavioral Contract:** What the module/function/endpoint *must* do, expressed as preconditions, postconditions, and invariants.
+- **Behavioural Contract:** What the module/function/endpoint *must* do, expressed as preconditions, postconditions, and invariants.
 - **Interface Definition:** Input types, output types, error types. No ambiguity. If it's an API, this is the OpenAPI/GraphQL schema. If it's a module, this is the type signature and doc contract.
 - **Edge Case Catalog:** Explicitly enumerated boundary conditions, degenerate inputs, and failure modes. The Builder is prompted to be *exhaustive* here — "What happens when the input is null? Empty? Maximum size? Negative? Unicode? Concurrent?"
 - **Non-Functional Requirements:** Performance bounds, memory constraints, security considerations baked into the spec itself.
 
 **Step 1b: Verification Architecture**
 
-Before any implementation design is finalized, the Builder produces a **Verification Strategy** that answers: *"What properties of this system must be mathematically provable, and what architectural constraints does that impose?"*
+Before any implementation design is finalised, the Builder produces a **Verification Strategy** that answers: *"What properties of this system must be mathematically provable, and what architectural constraints does that impose?"*
 
 This includes:
 
 - **Provable Properties Catalog:** Which invariants, safety properties, and correctness guarantees must be formally verified — not just tested? Examples: "This state machine can never reach an invalid state." "This arithmetic can never overflow." "This parser always terminates." "This access control check is never bypassed." The Builder distinguishes between properties that *should* be proven (critical path, security boundaries, financial calculations) and properties where test coverage is sufficient (UI formatting, logging, non-critical defaults).
 - **Purity Boundary Map:** A clear architectural separation between the **deterministic, side-effect-free core** (where formal verification can operate) and the **effectful shell** (I/O, network, database, user interaction). This is the most consequential design decision in VSDD — it dictates module boundaries, dependency direction, and how state flows through the system. The pure core must be designed so that verification tools can reason about it without mocking the entire universe.
 - **Verification Tooling Selection:** Based on the language and the properties to be proven, the Builder selects the appropriate formal verification stack (Kani for Rust, CBMC for C/C++, Dafny, TLA+ for distributed systems, etc.) and identifies any constraints these tools impose on code structure. This happens *now*, not after the code is written, because tool constraints are architectural constraints.
-- **Property Specifications:** Where possible, the Builder drafts the actual formal property definitions (e.g., Kani proof harnesses, Dafny contracts, TLA+ invariants) alongside the behavioral spec. These aren't implementation — they're the formal expression of what the spec already says in natural language. They serve as a second, mathematically precise encoding of the requirements.
+- **Property Specifications:** Where possible, the Builder drafts the actual formal property definitions (e.g., Kani proof harnesses, Dafny contracts, TLA+ invariants) alongside the behavioural spec. These aren't implementation — they're the formal expression of what the spec already says in natural language. They serve as a second, mathematically precise encoding of the requirements.
 
 **Why this must happen in Phase 1:** If the system is designed with side effects woven through the core logic, no amount of Phase 5 heroics will make it verifiable. A function that reads from a database, performs a calculation, and writes to a log in one block cannot be formally verified without mocking infrastructure that the verifier may not support. But a function that takes data in, returns a result, and lets the caller handle persistence — that's a function a model checker can reason about. This boundary must be drawn at the spec level because it fundamentally shapes the module decomposition, the dependency graph, and the testing strategy that follows.
 
 **Step 1c: Spec Review Gate**
 
-The complete spec — behavioral contracts *and* verification architecture — is reviewed by *both* the human and the Adversary before any tests are written. Sarcasmotron tears into the spec looking for:
+The complete spec — behavioural contracts *and* verification architecture — is reviewed by *both* the human and the Adversary before any tests are written. The Adversary tears into the spec looking for:
 
 - Ambiguous language that could be interpreted multiple ways
 - Missing edge cases
@@ -67,9 +147,9 @@ The complete spec — behavioral contracts *and* verification architecture — i
 - **Purity boundary violations** — logic marked as "pure core" that actually depends on external state
 - **Verification tool mismatches** — properties the selected tooling can't actually prove
 
-The spec is iterated until the Adversary can't find legitimate holes in either the behavioral contract or the verification strategy.
+The spec is iterated until the Adversary can't find legitimate holes in either the behavioural contract or the verification strategy.
 
-**Chainlink Integration:** Each spec maps to a Chainlink Issue. Sub-issues are generated for each behavioral contract item, edge case, non-functional requirement, *and* each formally provable property. The provable properties get their own bead chain so their status is tracked independently from test coverage.
+**Tracker Integration:** Each spec maps to a work item. Sub-items are generated for each behavioural contract item, edge case, non-functional requirement, *and* each formally provable property. The provable properties get their own work item chain so their status is tracked independently from test coverage.
 
 ---
 
@@ -83,10 +163,10 @@ With an airtight spec in hand, the Builder now writes tests — and *only* tests
 
 The Builder translates the spec directly into executable tests:
 
-- **Unit Tests:** One or more tests per behavioral contract item. Every postcondition becomes an assertion. Every precondition violation becomes a test that expects a specific error.
+- **Unit Tests:** One or more tests per behavioural contract item. Every postcondition becomes an assertion. Every precondition violation becomes a test that expects a specific error.
 - **Edge Case Tests:** Every item in the Edge Case Catalog becomes a test. These are the tests that catch the bugs that "never happen in production" (until they do).
 - **Integration Tests:** Tests that verify the module works correctly within the larger system context defined in the spec.
-- **Property-Based Tests:** Where applicable, the Builder generates property-based tests (e.g., using Hypothesis, fast-check, or proptest) that assert invariants hold across randomized inputs.
+- **Property-Based Tests:** Where applicable, the Builder generates property-based tests (e.g., using Hypothesis, fast-check, or proptest) that assert invariants hold across randomised inputs.
 
 **The Red Gate:** All tests must *fail* before any implementation begins. If a test passes without implementation, the test is suspect — it's either testing the wrong thing or the spec was wrong. The Builder flags this for human review.
 
@@ -107,21 +187,22 @@ After all tests are green, the Builder refactors for clarity, performance, and a
 
 ---
 
-#### **Phase 3 — Adversarial Refinement (The VDD Roast)**
+#### **Phase 3 — Adversarial Refinement**
 
-*The code survived testing. Now it faces the gauntlet.*
+*The code survived testing. Now it faces the Adversary.*
 
-The verified, test-passing codebase — along with the spec and test suite — is presented to **Sarcasmotron** in a fresh context window.
+The verified, test-passing codebase — along with the spec and test suite — is presented to the Adversary in a fresh context window. This is a **standing gate**: the Adversary runs on every PR before merge, not only at spec completion.
 
 **What the Adversary reviews:**
 
 1. **Spec Fidelity:** Does the implementation actually satisfy the spec, or did the tests inadvertently encode a misunderstanding?
-2. **Test Quality:** Are the tests actually testing what they claim? Are there tests that would pass even if the implementation were subtly wrong? (Tautological tests, tests that mock too aggressively, tests that assert on implementation details rather than behavior.)
-3. **Code Quality:** The classic VDD roast — placeholder comments, generic error handling, inefficient patterns, hidden coupling, missing resource cleanup, race conditions.
-4. **Security Surface:** Input validation gaps, injection vectors, authentication/authorization assumptions.
+2. **Test Quality:** Are the tests actually testing what they claim? Are there tests that would pass even if the implementation were subtly wrong? (Tautological tests, tests that mock too aggressively, tests that assert on implementation details rather than behaviour.)
+3. **Code Quality:** Placeholder comments, generic error handling, inefficient patterns, hidden coupling, missing resource cleanup, race conditions.
+4. **Security Surface:** Input validation gaps, injection vectors, authentication/authorisation assumptions.
 5. **Spec Gaps Revealed by Implementation:** Sometimes writing the code reveals that the spec was incomplete. The Adversary looks for implemented behavior that isn't covered by the spec.
+6. **Process Properties:** For PRs — branch used, CI green, documentation updated, change traceable to a spec requirement.
 
-**Negative Prompting:** Sarcasmotron is prompted for zero tolerance. No "overall this looks good, but..." preamble. Every piece of feedback is a concrete flaw with a specific location and a proposed fix or question.
+**Negative Prompting:** The Adversary is configured for zero tolerance. No "overall this looks good, but..." preamble. Every piece of feedback is a concrete flaw with a specific location and a proposed fix or question.
 
 **Context Reset:** Fresh context window on every adversarial pass. No relationship drift. No accumulated goodwill.
 
@@ -160,7 +241,7 @@ VSDD inherits VDD's **hallucination-based termination**, extended across all thr
 
 | Dimension | Convergence Signal |
 | --- | --- |
-| **Spec** | The Adversary's spec critiques are nitpicks about wording, not about missing behavior, ambiguity, or verification gaps. |
+| **Spec** | The Adversary's spec critiques are nitpicks about wording, not about missing behaviour, ambiguity, or verification gaps. |
 | **Tests** | The Adversary can't identify a meaningful untested scenario. Mutation testing confirms high kill rate. |
 | **Implementation** | The Adversary is forced to invent problems that don't exist in the code. |
 | **Verification** | All properties from the Phase 1b catalog pass formal proof. Fuzzers find nothing. Purity boundaries are intact. |
@@ -169,19 +250,19 @@ VSDD inherits VDD's **hallucination-based termination**, extended across all thr
 
 ---
 
-### **III. The VSDD Contract Chain**
+### **IV. The VSDD Contract Chain**
 
 One of VSDD's defining properties is **full traceability**. Every artifact links back:
 
 ```
-Spec Requirement → Verification Property → Chainlink Bead → Test Case → Implementation → Adversarial Review → Formal Proof
+Spec Requirement → Verification Property → Work Item → Test Case → Implementation → Adversarial Review → Formal Proof
 ```
 
 At any point, you can ask: *"Why does this line of code exist?"* and trace it all the way back to a specific spec requirement, through the verification property it satisfies, the test that demanded it, the adversarial review that hardened it, and the formal proof that guarantees it. Equally, you can ask *"Why is this module structured as a pure function?"* and trace that decision back to the Purity Boundary Map in Phase 1b.
 
 ---
 
-### **IV. Core Principles of VSDD**
+### **V. Core Principles of VSDD**
 
 1. **Spec Supremacy:** The spec is the highest authority below the human developer. Tests serve the spec. Code serves the tests. Nothing exists without a reason traced to the spec.
 
@@ -189,31 +270,31 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 
 3. **Red Before Green:** No implementation code is written until a failing test demands it. AI models are explicitly constrained to follow TDD discipline — no "let me just write the whole thing and add tests after."
 
-3. **Anti-Slop Bias:** The first "correct" version is assumed to contain hidden debt. Trust is earned through adversarial survival, not initial appearance.
+4. **Anti-Slop Bias:** The first "correct" version is assumed to contain hidden debt. Trust is earned through adversarial survival, not initial appearance.
 
-4. **Forced Negativity:** Adversarial pressure bypasses the politeness filters of standard LLM interactions. The Adversary doesn't care about your feelings — it cares about your invariants.
+5. **Forced Negativity:** Adversarial pressure bypasses the politeness filters of standard LLM interactions. The Adversary doesn't care about your feelings — it cares about your invariants.
 
-5. **Linear Accountability:** Chainlink beads ensure every spec item, test, and line of code has a corresponding tracked unit of work. Nothing slips through the cracks.
+6. **Traceability:** The Tracker ensures every spec item, test, and line of code has a corresponding tracked work item. Nothing slips through the cracks.
 
-6. **Entropy Resistance:** Context resets on every adversarial pass prevent the natural degradation of long-running AI conversations.
+7. **Entropy Resistance:** Context resets on every adversarial pass prevent the natural degradation of long-running AI conversations.
 
-7. **Four-Dimensional Convergence:** The system isn't done until specs, tests, implementation, *and* formal proofs have all independently survived adversarial review.
+8. **Four-Dimensional Convergence:** The system isn't done until specs, tests, implementation, *and* formal proofs have all independently survived adversarial review.
 
 ---
 
-### **V. AI Orchestration Notes**
+### **VI. AI Orchestration Notes**
 
 VSDD is explicitly designed for multi-model AI workflows:
 
 - **The Builder** benefits from large context windows and strong code generation (Claude, GPT-4, etc.). It needs to hold the full spec, test suite, and implementation simultaneously.
-- **The Adversary** benefits from a *different* model or configuration to avoid shared blind spots. Using a different model family (e.g., Gemini as Adversary when Claude is Builder) introduces genuine cognitive diversity.
+- **The Adversary** benefits from a *different* model or configuration to avoid shared blind spots. Using a different model family introduces genuine cognitive diversity.
 - **The Human** is not a bottleneck — they're the strategic layer. They approve specs, resolve disputes, and make judgment calls that AI can't. The human's role is *elevated*, not diminished, by the AI orchestration.
 
 **Prompt Engineering for TDD Discipline:** The Builder must be explicitly instructed: *"You are operating under strict TDD. Write tests FIRST. Do NOT write implementation code until I confirm all tests fail. When implementing, write the MINIMUM code to pass each test."* Without this constraint, AI models will naturally try to write implementation and tests simultaneously.
 
 ---
 
-### **VI. When to Use VSDD**
+### **VII. When to Use VSDD**
 
 VSDD is high-ceremony by design. It's worth the overhead when:
 
