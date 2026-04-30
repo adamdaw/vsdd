@@ -10,7 +10,7 @@
 - **Test-Driven Development (TDD):** Tests are written *before* code. Red → Green → Refactor. No code exists without a failing test that demanded it.
 - **Verification-Driven Development (VDD):** Subject all surviving code to adversarial refinement until a hyper-critical reviewer is forced to hallucinate flaws.
 
-VSDD treats these not as competing philosophies but as **sequential gates** in a single pipeline. Specs define *what*. Tests enforce *how*. Adversarial verification ensures *nothing was missed*. AI models orchestrate every phase, with the human developer serving as the strategic decision-maker and final authority.
+VSDD treats these not as competing philosophies but as **sequential gates** in a single pipeline.[^merrill] Specs define *what*. Tests enforce *how*. Adversarial verification ensures *nothing was missed*. AI models orchestrate every phase, with the human developer serving as the strategic decision-maker and final authority.
 
 ---
 
@@ -78,7 +78,7 @@ Receives the artifact under review (spec, PR diff, or codebase section) — noth
 **Curation**
 Scans for: completeness gaps, measurability failures, internal contradictions, invisible assumptions, and failure path omissions. For PRs specifically: documentation currency, test coverage, traceability (does this change trace to a spec requirement?), process property adherence (branch used, CI green, docs updated), and **over-editing** — changes that exceed the scope of the fix. Does *not* curate for style preferences or non-falsifiable opinions.
 
-*Over-editing defined:* a change over-edits when it modifies code beyond what the fix strictly requires — renaming variables, adding validation, restructuring logic, introducing new nesting or control flow. Every line changed that was not broken is an unrequested change and a review burden. The Adversary flags it with: `[Location]: change exceeds fix scope → revert unrequested modifications`.
+*Over-editing defined:* a change over-edits when it modifies code beyond what the fix strictly requires — renaming variables, adding validation, restructuring logic, introducing new nesting or control flow. Every line changed that was not broken is an unrequested change and a review burden. The Adversary flags it with: `[Location]: change exceeds fix scope → revert unrequested modifications`[^over-editing].
 
 **Conceptualization**
 Frames every review as: *"What would break, be misunderstood, or be unprovable about this artifact in the hands of someone with no context?"* Represents the hostile auditor and the future maintainer simultaneously.
@@ -187,6 +187,10 @@ After all tests are green, the Builder refactors for clarity, performance, and a
 
 **Human Checkpoint:** The developer reviews the test suite and implementation for alignment with the "spirit" of the spec. AI can miss intent even when it nails the letter of the contract.
 
+**Step 2d: Builder Self-Review**
+
+Before handing off to the Adversary, the Builder performs a self-critique pass against the spec. This is not a replacement for adversarial review — it is a pre-flight check that surfaces issues the Builder can identify from its own position. Prompt: *"Review your implementation against the spec. Identify anything incomplete, inconsistent with the spec, or likely to fail adversarial scrutiny. Fix what you can; escalate what cannot be resolved without Architect input."* Self-review with explicit prompting yields measurable improvement before external review; the Adversary then focuses on what self-review cannot reach.[^self-refine]
+
 ---
 
 #### **Phase 3 — Adversarial Refinement**
@@ -197,7 +201,7 @@ The verified, test-passing codebase — along with the spec and test suite — i
 
 **What the Adversary reviews:**
 
-1. **Spec Fidelity:** Does the implementation actually satisfy the spec, or did the tests inadvertently encode a misunderstanding?
+1. **Spec Fidelity:** Does the implementation actually satisfy the spec, or did the tests inadvertently encode a misunderstanding? The Adversary treats the spec as a constitution: the implementation must satisfy it fully and explicitly, not approximately. There is no partial credit for "mostly implemented" or "intended to satisfy" — either the requirement is met, demonstrably, or it is not.[^constitutional]
 2. **Test Quality:** Are the tests actually testing what they claim? Are there tests that would pass even if the implementation were subtly wrong? (Tautological tests, tests that mock too aggressively, tests that assert on implementation details rather than behaviour.)
 3. **Code Quality:** Placeholder comments, generic error handling, inefficient patterns, hidden coupling, missing resource cleanup, race conditions.
 4. **Security Surface:** Input validation gaps, injection vectors, authentication/authorisation assumptions.
@@ -279,7 +283,7 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 
 6. **Traceability:** The Tracker ensures every spec item, test, and line of code has a corresponding tracked work item. Nothing slips through the cracks.
 
-7. **Entropy Resistance:** Context resets on every adversarial pass prevent the natural degradation of long-running AI conversations.
+7. **Entropy Resistance:** Context resets on every adversarial pass prevent the natural degradation of long-running AI conversations. The spec is the persistent cross-episode record — what persists between passes is the spec and formal artefacts, not conversational history or prior review feedback. Entropy Resistance does not mean forgetting; it means that what is remembered is the spec, not the relationship.[^reflexion]
 
 8. **Four-Dimensional Convergence:** The system isn't done until specs, tests, implementation, *and* formal proofs have all independently survived adversarial review.
 
@@ -290,7 +294,7 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 VSDD is explicitly designed for multi-model AI workflows:
 
 - **The Builder** benefits from large context windows and strong code generation (Claude, GPT-4, etc.). It needs to hold the full spec, test suite, and implementation simultaneously.
-- **The Adversary** benefits from a *different* model or configuration to avoid shared blind spots. Using a different model family introduces genuine cognitive diversity.
+- **The Adversary** benefits from a *different* model or configuration — and more importantly, from structurally opposed objectives. VSDD uses build vs. break role separation, not merely different model instances with different parameters. Multi-agent debate between identical instances still converges on shared biases; genuinely opposed objectives force the disagreement that surfaces real flaws.[^debate]
 - **The Human** is not a bottleneck — they're the strategic layer. They approve specs, resolve disputes, and make judgment calls that AI can't. The human's role is *elevated*, not diminished, by the AI orchestration.
 
 **Prompt Engineering for TDD Discipline:** The Builder must be explicitly instructed: *"You are operating under strict TDD. Write tests FIRST. Do NOT write implementation code until I confirm all tests fail. When implementing, write the MINIMUM code to pass each test."* Without this constraint, AI models will naturally try to write implementation and tests simultaneously.
@@ -312,3 +316,23 @@ For rapid prototyping or throwaway scripts, use the parts that make sense — TD
 ---
 
 *"VSDD doesn't just generate code — it generates code that can prove why it exists, demonstrate that it works, and survive an adversary that wants it dead."*
+
+---
+
+### References
+
+[^5cs]: Daw, A. (2026). *Five Categories of Human Excellence in the Age of AI*. https://adamdaw.com/writing/five-categories-of-human-excellence/
+
+[^merrill]: Merrill, W., & Sabharwal, A. (2023). The Expressive Power of Transformers with Chain of Thought. *NeurIPS 2023*. arXiv:2310.07923. https://arxiv.org/abs/2310.07923
+
+[^self-refine]: Madaan, A., Tandon, N., Gupta, P., et al. (2023). Self-Refine: Iterative Refinement with Self-Feedback. *NeurIPS 2023*. arXiv:2303.17651. https://arxiv.org/abs/2303.17651
+
+[^reflexion]: Shinn, N., Cassano, F., Berman, E., et al. (2023). Reflexion: Language Agents with Verbal Reinforcement Learning. *NeurIPS 2023*. arXiv:2303.11366. https://arxiv.org/abs/2303.11366
+
+[^debate]: Du, Y., Li, S., Torralba, A., Tenenbaum, J. B., & Mordatch, I. (2023). Improving Factuality and Reasoning in Language Models through Multiagent Debate. arXiv:2305.14325. https://arxiv.org/abs/2305.14325
+
+[^constitutional]: Bai, Y., Kadavath, S., Kundu, S., et al. (2022). Constitutional AI: Harmlessness from AI Feedback. arXiv:2212.08073. https://arxiv.org/abs/2212.08073
+
+[^over-editing]: Nrehiew (2026). Coding Models Are Doing Too Much. https://nrehiew.github.io/blog/minimal_editing/
+
+[^snell]: Snell, C., Klein, D., & Zhong, V. (2022). Learning by Distilling Context. arXiv:2209.15189. https://arxiv.org/abs/2209.15189
