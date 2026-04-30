@@ -27,7 +27,7 @@ VSDD treats these not as competing philosophies but as **sequential gates** in a
 
 ### **II. Agent Roles — 5Cs Characterisation**
 
-Each VSDD agent role is defined through the five dimensions that govern effective AI collaboration: **Constraints, Context, Curation, Conceptualization, Creativity**.
+Each VSDD agent role is defined through the five dimensions that govern effective AI collaboration: **Constraints, Context, Curation, Conceptualization, Creativity** — a framework developed in *[Five Categories of Human Excellence in the Age of AI](https://adamdaw.com/writing/five-categories-of-human-excellence/)* (Daw, 2026). The 5Cs were originally articulated as the surfaces where human judgment concentrates in human-AI collaboration; their application here to agent role definition demonstrates that they function as a general design language, not only a practice checklist.
 
 #### The Architect *(human developer)*
 
