@@ -98,7 +98,7 @@ Must enforce issue assignment before code edits — no implementation work begin
 **Context**
 Needs: the converged spec, the current implementation state, and the test suite. Does *not* need the Adversary's review history or architectural decision rationale — only the decisions themselves. In team contexts, also needs the current sprint and backlog state from the team's issue tracker.
 
-The Tracker's state must be readable by a fresh AI session with no conversational history. A context reset or session boundary should impose zero re-orientation cost — a new session reads the active work item and its handoff note and knows exactly where it is. This is the Repo-as-Source-of-Truth principle at the issue level: what persists between sessions is the Tracker state, not the conversation.[^chainlink]
+The Tracker's state must expose the active work item to a fresh AI session with no conversational history. A context reset should impose zero re-orientation cost for identifying *what* is being worked on — the Tracker answers that. The substantive handoff note (what was done, what's next) lives in the repo, not the Tracker; the Tracker holds the pointer, the repo holds the content.[^chainlink]
 
 **Curation**
 Extracts atomic, independently testable units of work from the spec. Prioritises work items that unblock other work items — decomposition is dependency-aware. Flags work items where the spec is insufficiently specific to enable a test, surfacing the gap to the Architect rather than the Builder.
@@ -108,8 +108,6 @@ Frames every task as: *"What is the smallest unit of work that is independently 
 
 **Creativity**
 Different decomposition strategies carry different risk profiles when spec changes arrive. The Tracker's creativity is in finding the slice that minimises rework. It also flags when decomposition reveals that two apparently separate work items are actually coupled — which is a spec gap requiring Architect attention, not a Builder workaround.
-
-**Session Handoff Notes:** When a work session ends — whether by context compression, explicit reset, or natural close — the Tracker records a handoff note on the active work item: current state, decisions made this session, blockers, and the immediate next step. The handoff note is the breadcrumb that survives context loss. A fresh session reads the active item's handoff note before touching any code. The goal: zero re-orientation cost on session restart, regardless of how many sessions the work spans.[^chainlink]
 
 ---
 
@@ -178,7 +176,7 @@ The Builder translates the spec directly into executable tests:
 - **Integration Tests:** Tests that verify the module works correctly within the larger system context defined in the spec.
 - **Property-Based Tests:** Where applicable, the Builder generates property-based tests (e.g., using Hypothesis, fast-check, or proptest) that assert invariants hold across randomised inputs.
 
-**The Red Gate:** All tests must *fail* before any implementation begins. If a test passes without implementation, the test is suspect — it's either testing the wrong thing or the spec was wrong. The Builder flags this for human review.
+**The Red Gate:** All tests must *fail* before any implementation begins. If a test passes without implementation, the test is suspect — it's either testing the wrong thing or the spec was wrong. The Builder flags this for human review. This gate should be enforced structurally: a pre-implementation hook that verifies at least one failing test exists before allowing code edits, consistent with External Enforcement over Persuasion (Core Principle 8).
 
 **Step 2b: Minimal Implementation**
 
@@ -207,7 +205,7 @@ Before handing off to the Adversary, the Builder performs a self-critique pass a
 
 *The code survived testing. Now it faces the Adversary.*
 
-The verified, test-passing codebase — along with the spec and test suite — is presented to the Adversary in a fresh context window. This is a **standing gate**: the Adversary runs on every PR before merge, not only at spec completion.
+The verified, test-passing codebase — along with the spec and test suite — is presented to the Adversary in a fresh context window. This is a **standing gate**: the Adversary runs on every PR before merge, not only at spec completion. The gate should be enforced structurally — a CI check or pre-merge hook that blocks merge without a recorded Adversary pass — not by relying on the Builder to remember to invoke it (Core Principle 8).
 
 **What the Adversary reviews:**
 
@@ -313,7 +311,9 @@ VSDD is explicitly designed for multi-model AI workflows:
 - **The Adversary** benefits from a *different* model or configuration — and more importantly, from structurally opposed objectives. VSDD uses build vs. break role separation, not merely different model instances with different parameters. Multi-agent debate between identical instances still converges on shared biases; genuinely opposed objectives force the disagreement that surfaces real flaws.[^debate]
 - **The Human** is not a bottleneck — they're the strategic layer. They approve specs, resolve disputes, and make judgment calls that AI can't. The human's role is *elevated*, not diminished, by the AI orchestration.
 
-**Tracker Tooling:** The Tracker role can be fulfilled by any issue system that supports three required practices: (1) external enforcement of issue assignment before code edits; (2) session-survivable state readable by a fresh AI context without re-orientation; (3) handoff notes that persist across session boundaries. Reference implementation: [Chainlink](https://github.com/dollspace-gay/chainlink) — local SQLite, Claude Code hooks for structural enforcement, built-in breadcrumb/handoff tracking. Team alternatives (GitHub Issues, Linear) require the three practices to be implemented via hooks and issue templates rather than relying on discipline alone.[^chainlink]
+**Session Handoff Notes (all roles):** When any work session ends — whether by context compression, explicit reset, or natural close — a handoff note is committed to the repository for the active work item: current state, decisions made this session, blockers, and the immediate next step. The note's *content* lives in the repo (Repo-as-Source-of-Truth — this is a phase artifact, not a conversation); the *active item pointer* lives in the Tracker. A fresh session reads the handoff note from the repo before touching any code or spec. This applies to every role: the Builder records implementation state; the Adversary records what converged and what remains open; the Architect records decisions made. The Tracker is not the repository for handoff note content — the repo is.[^chainlink]
+
+**Tracker Tooling:** The Tracker role can be fulfilled by any issue system that supports two required structural practices: (1) external enforcement of issue assignment before code edits — a hook that blocks edits without an active issue, not a prompt to remember; (2) session-survivable active-item state — a fresh session can identify the current work item without re-reading the conversation. The Tracker holds work item state (which item is active, dependencies, blockers); the repo holds artifact content (specs, TDD logs, handoff notes). Reference implementation: [Chainlink](https://github.com/dollspace-gay/chainlink) — local SQLite with Claude Code hooks. Team alternatives (GitHub Issues, Linear) require the structural practices to be implemented via hooks and issue templates.[^chainlink]
 
 **Prompt Engineering for TDD Discipline:** The Builder must be explicitly instructed: *"You are operating under strict TDD. Write tests FIRST. Do NOT write implementation code until I confirm all tests fail. When implementing, write the MINIMUM code to pass each test."* Without this constraint, AI models will naturally try to write implementation and tests simultaneously.
 
