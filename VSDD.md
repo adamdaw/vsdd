@@ -93,8 +93,12 @@ Tightly constrained by design. The closest analogue is the ability to surface no
 **Constraints**
 Cannot invent requirements — every work item traces to a spec requirement. Cannot approve implementation; that is the Adversary's gate. Scope is issue decomposition and traceability only; no architectural judgment. Must maintain the full chain: Spec Requirement → Quality Scenario → Work Item → Test Case → Implementation. In team contexts, integrates with whatever issue tracking system the team uses — does not replace it.
 
+Must enforce issue assignment before code edits — no implementation work begins without an active, assigned work item. This is an External Enforcement concern: the mechanism should be structural (a hook that blocks edits without an active issue) rather than instructional. A prompt to "always create an issue first" is not enforcement; a pre-edit hook that exits `1` without an active issue is.[^chainlink]
+
 **Context**
 Needs: the converged spec, the current implementation state, and the test suite. Does *not* need the Adversary's review history or architectural decision rationale — only the decisions themselves. In team contexts, also needs the current sprint and backlog state from the team's issue tracker.
+
+The Tracker's state must be readable by a fresh AI session with no conversational history. A context reset or session boundary should impose zero re-orientation cost — a new session reads the active work item and its handoff note and knows exactly where it is. This is the Repo-as-Source-of-Truth principle at the issue level: what persists between sessions is the Tracker state, not the conversation.[^chainlink]
 
 **Curation**
 Extracts atomic, independently testable units of work from the spec. Prioritises work items that unblock other work items — decomposition is dependency-aware. Flags work items where the spec is insufficiently specific to enable a test, surfacing the gap to the Architect rather than the Builder.
@@ -104,6 +108,8 @@ Frames every task as: *"What is the smallest unit of work that is independently 
 
 **Creativity**
 Different decomposition strategies carry different risk profiles when spec changes arrive. The Tracker's creativity is in finding the slice that minimises rework. It also flags when decomposition reveals that two apparently separate work items are actually coupled — which is a spec gap requiring Architect attention, not a Builder workaround.
+
+**Session Handoff Notes:** When a work session ends — whether by context compression, explicit reset, or natural close — the Tracker records a handoff note on the active work item: current state, decisions made this session, blockers, and the immediate next step. The handoff note is the breadcrumb that survives context loss. A fresh session reads the active item's handoff note before touching any code. The goal: zero re-orientation cost on session restart, regardless of how many sessions the work spans.[^chainlink]
 
 ---
 
@@ -307,6 +313,8 @@ VSDD is explicitly designed for multi-model AI workflows:
 - **The Adversary** benefits from a *different* model or configuration — and more importantly, from structurally opposed objectives. VSDD uses build vs. break role separation, not merely different model instances with different parameters. Multi-agent debate between identical instances still converges on shared biases; genuinely opposed objectives force the disagreement that surfaces real flaws.[^debate]
 - **The Human** is not a bottleneck — they're the strategic layer. They approve specs, resolve disputes, and make judgment calls that AI can't. The human's role is *elevated*, not diminished, by the AI orchestration.
 
+**Tracker Tooling:** The Tracker role can be fulfilled by any issue system that supports three required practices: (1) external enforcement of issue assignment before code edits; (2) session-survivable state readable by a fresh AI context without re-orientation; (3) handoff notes that persist across session boundaries. Reference implementation: [Chainlink](https://github.com/dollspace-gay/chainlink) — local SQLite, Claude Code hooks for structural enforcement, built-in breadcrumb/handoff tracking. Team alternatives (GitHub Issues, Linear) require the three practices to be implemented via hooks and issue templates rather than relying on discipline alone.[^chainlink]
+
 **Prompt Engineering for TDD Discipline:** The Builder must be explicitly instructed: *"You are operating under strict TDD. Write tests FIRST. Do NOT write implementation code until I confirm all tests fail. When implementing, write the MINIMUM code to pass each test."* Without this constraint, AI models will naturally try to write implementation and tests simultaneously.
 
 ---
@@ -346,6 +354,8 @@ For rapid prototyping or throwaway scripts, use the parts that make sense — TD
 [^over-editing]: Nrehiew (2026). Coding Models Are Doing Too Much. https://nrehiew.github.io/blog/minimal_editing/
 
 [^snell]: Snell, C., Klein, D., & Zhong, V. (2022). Learning by Distilling Context. arXiv:2209.15189. https://arxiv.org/abs/2209.15189
+
+[^chainlink]: dollspace (2024). Chainlink: local-first AI-native issue tracker. https://github.com/dollspace-gay/chainlink
 
 [^speckit]: GitHub (2025). Spec Kit: Spec-Driven Development toolkit. https://github.com/github/spec-kit
 
