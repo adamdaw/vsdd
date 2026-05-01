@@ -181,6 +181,8 @@ The Builder writes the *minimum* code necessary to make each test pass, one at a
 3. Run the full suite — nothing else should break.
 4. Repeat.
 
+**TDD Compliance Log:** The Builder records, for each requirement, the mapping: failing test → minimal implementation → test pass. This log is committed to the repository alongside the code. It is not documentation after the fact — it is the audit trail that the Adversary checks when verifying that TDD discipline was followed in practice, not merely claimed.[^rlm]
+
 **Step 2c: Refactor**
 
 After all tests are green, the Builder refactors for clarity, performance, and adherence to the non-functional requirements in the spec. The test suite acts as the safety net — if refactoring breaks something, the tests catch it immediately.
@@ -211,6 +213,8 @@ The verified, test-passing codebase — along with the spec and test suite — i
 **Negative Prompting:** The Adversary is configured for zero tolerance. No "overall this looks good, but..." preamble. Every piece of feedback is a concrete flaw with a specific location and a proposed fix or question.
 
 **Context Reset:** Fresh context window on every adversarial pass. No relationship drift. No accumulated goodwill.
+
+**Artifact Locking:** Once the Adversary issues a pass declaration for a phase artifact, that artifact is locked — no back-edits. If subsequent work reveals a gap in a locked artifact, it is captured in a dated addendum file, not by revising the original. This preserves the audit trail and prevents retroactive rationalisation of prior decisions.[^rlm]
 
 ---
 
@@ -267,6 +271,8 @@ Spec Requirement → Verification Property → Work Item → Test Case → Imple
 
 At any point, you can ask: *"Why does this line of code exist?"* and trace it all the way back to a specific spec requirement, through the verification property it satisfies, the test that demanded it, the adversarial review that hardened it, and the formal proof that guarantees it. Equally, you can ask *"Why is this module structured as a pure function?"* and trace that decision back to the Purity Boundary Map in Phase 1b.
 
+**Repo as Source of Truth:** Phase artifacts — the spec, the verification strategy, ADRs, the Adversary's convergence declarations — live in the repository as versioned documents, not in conversation history or prompt memory. Prompts and conversational turns are lightweight commands; the authoritative state is always what is committed. This means every artifact can be read, diffed, and audited independently of any AI session, and a new session can be fully oriented by reading the repo alone.[^rlm]
+
 ---
 
 ### **V. Core Principles of VSDD**
@@ -285,7 +291,9 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 
 7. **Entropy Resistance:** Context resets on every adversarial pass prevent the natural degradation of long-running AI conversations. The spec is the persistent cross-episode record — what persists between passes is the spec and formal artefacts, not conversational history or prior review feedback. Entropy Resistance does not mean forgetting; it means that what is remembered is the spec, not the relationship.[^reflexion]
 
-8. **Four-Dimensional Convergence:** The system isn't done until specs, tests, implementation, *and* formal proofs have all independently survived adversarial review.
+8. **External Enforcement over Persuasion:** Phase gates must be enforced by deterministic, non-AI scripts wherever possible — exit-code CI checks, pre-commit hooks, test runners — not by asking the Builder or Adversary to self-certify. AI confirmation of AI output is not a gate; a process that exits `1` on failure is. Prompts and instructions constrain agent behaviour at the soft level; tooling enforces it at the hard level. Where possible, validation at each phase gate should be zero-token: deterministic scripts, not LLM review.[^codeleash]
+
+9. **Four-Dimensional Convergence:** The system isn't done until specs, tests, implementation, *and* formal proofs have all independently survived adversarial review.
 
 ---
 
@@ -336,3 +344,7 @@ For rapid prototyping or throwaway scripts, use the parts that make sense — TD
 [^over-editing]: Nrehiew (2026). Coding Models Are Doing Too Much. https://nrehiew.github.io/blog/minimal_editing/
 
 [^snell]: Snell, C., Klein, D., & Zhong, V. (2022). Learning by Distilling Context. arXiv:2209.15189. https://arxiv.org/abs/2209.15189
+
+[^codeleash]: CodeLeash (2024). Constraint-based agentic TDD framework. https://codeleash.dev/
+
+[^rlm]: doubleuuser (2024). RLM Workflow: Repository-centric Language Model workflow. https://skills.sh/doubleuuser/rlm-workflow/rlm-workflow
