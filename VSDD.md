@@ -113,6 +113,8 @@ Different decomposition strategies carry different risk profiles when spec chang
 
 *Nothing gets built until the contract is airtight — and the architecture is verification-ready by design.*
 
+**Prerequisite: the Constitution.** Before any feature work begins, the Architect establishes a project-level **Constitution** — the standing governing principles, architectural rules, and quality goals that all per-feature Specs must honour. The Constitution is a living document owned by the Architect; it does not change per feature. If a feature Spec would require violating the Constitution, the Architect must consciously amend the Constitution first rather than allowing silent exceptions.[^speckit]
+
 The human developer describes the feature intent to the Builder. The Builder then produces a **formal specification document** for each unit of work. Critically, this phase doesn't just define *what* the software does — it defines *what must be provable about it* and structures the architecture accordingly.
 
 **Step 1a: Behavioural Specification**
@@ -132,7 +134,7 @@ This includes:
 
 - **Provable Properties Catalog:** Which invariants, safety properties, and correctness guarantees must be formally verified — not just tested? Examples: "This state machine can never reach an invalid state." "This arithmetic can never overflow." "This parser always terminates." "This access control check is never bypassed." The Builder distinguishes between properties that *should* be proven (critical path, security boundaries, financial calculations) and properties where test coverage is sufficient (UI formatting, logging, non-critical defaults).
 - **Purity Boundary Map:** A clear architectural separation between the **deterministic, side-effect-free core** (where formal verification can operate) and the **effectful shell** (I/O, network, database, user interaction). This is the most consequential design decision in VSDD — it dictates module boundaries, dependency direction, and how state flows through the system. The pure core must be designed so that verification tools can reason about it without mocking the entire universe.
-- **Verification Tooling Selection:** Based on the language and the properties to be proven, the Builder selects the appropriate formal verification stack (Kani for Rust, CBMC for C/C++, Dafny, TLA+ for distributed systems, etc.) and identifies any constraints these tools impose on code structure. This happens *now*, not after the code is written, because tool constraints are architectural constraints.
+- **Verification Tooling Selection:** Based on the language and the properties to be proven, the Builder selects the appropriate formal verification stack (Kani for Rust, CBMC for C/C++, Dafny, TLA+ for distributed systems, etc.) and identifies any constraints these tools impose on code structure. This happens *now*, not after the code is written, because tool constraints are architectural constraints. Where tooling selection is uncertain, a **Research artifact** is produced first — a spike that validates the chosen tool against a representative property before the full verification architecture commits to it. The Research artifact records spike results, the tool decision, and reasons alternatives were rejected; it is committed to the repository alongside the Constitution and Spec.[^speckit]
 - **Property Specifications:** Where possible, the Builder drafts the actual formal property definitions (e.g., Kani proof harnesses, Dafny contracts, TLA+ invariants) alongside the behavioural spec. These aren't implementation — they're the formal expression of what the spec already says in natural language. They serve as a second, mathematically precise encoding of the requirements.
 
 **Why this must happen in Phase 1:** If the system is designed with side effects woven through the core logic, no amount of Phase 5 heroics will make it verifiable. A function that reads from a database, performs a calculation, and writes to a log in one block cannot be formally verified without mocking infrastructure that the verifier may not support. But a function that takes data in, returns a result, and lets the caller handle persistence — that's a function a model checker can reason about. This boundary must be drawn at the spec level because it fundamentally shapes the module decomposition, the dependency graph, and the testing strategy that follows.
@@ -266,7 +268,7 @@ VSDD inherits VDD's **hallucination-based termination**, extended across all thr
 One of VSDD's defining properties is **full traceability**. Every artifact links back:
 
 ```
-Spec Requirement → Verification Property → Work Item → Test Case → Implementation → Adversarial Review → Formal Proof
+Constitution → Spec Requirement → Verification Property → Work Item → Test Case → Implementation → Adversarial Review → Formal Proof
 ```
 
 At any point, you can ask: *"Why does this line of code exist?"* and trace it all the way back to a specific spec requirement, through the verification property it satisfies, the test that demanded it, the adversarial review that hardened it, and the formal proof that guarantees it. Equally, you can ask *"Why is this module structured as a pure function?"* and trace that decision back to the Purity Boundary Map in Phase 1b.
@@ -277,7 +279,7 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 
 ### **V. Core Principles of VSDD**
 
-1. **Spec Supremacy:** The spec is the highest authority below the human developer. Tests serve the spec. Code serves the tests. Nothing exists without a reason traced to the spec.
+1. **Spec Supremacy:** Two spec-level artifacts govern the pipeline. The **Constitution** is the project-level governing document — standing principles, architectural rules, and quality goals that apply across all features. The **Spec** is the per-feature behavioural contract — preconditions, postconditions, invariants, and edge cases for the current unit of work. Tests serve the Spec. The Spec serves the Constitution. Code serves the tests. Nothing exists without a reason traced to the Spec, and no Spec requirement may contradict the Constitution.[^speckit]
 
 2. **Verification-First Architecture:** The need for formal provability shapes the design, not the other way around. Pure core, effectful shell. If you can't verify it, you architected it wrong — and you find that out in Phase 1, not Phase 5.
 
@@ -344,6 +346,8 @@ For rapid prototyping or throwaway scripts, use the parts that make sense — TD
 [^over-editing]: Nrehiew (2026). Coding Models Are Doing Too Much. https://nrehiew.github.io/blog/minimal_editing/
 
 [^snell]: Snell, C., Klein, D., & Zhong, V. (2022). Learning by Distilling Context. arXiv:2209.15189. https://arxiv.org/abs/2209.15189
+
+[^speckit]: GitHub (2025). Spec Kit: Spec-Driven Development toolkit. https://github.com/github/spec-kit
 
 [^codeleash]: CodeLeash (2024). Constraint-based agentic TDD framework. https://codeleash.dev/
 
