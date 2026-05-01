@@ -1,3 +1,5 @@
+Verified Spec-Driven Development
+
 # **Verified Spec-Driven Development (VSDD)**
 
 ## **The Fusion: VDD × TDD × SDD for AI-Native Engineering**
@@ -119,6 +121,8 @@ Different decomposition strategies carry different risk profiles when spec chang
 
 **Prerequisite: the Constitution.** Before any feature work begins, the Architect establishes a project-level **Constitution** — the standing governing principles, architectural rules, and quality goals that all per-feature Specs must honour. The Constitution is a living document owned by the Architect; it does not change per feature. If a feature Spec would require violating the Constitution, the Architect must consciously amend the Constitution first rather than allowing silent exceptions.[^speckit]
 
+**Dependency Hygiene Policy.** The Constitution SHOULD establish a project-wide dependency hygiene policy covering all features. Minimum viable content: (1) a *justification requirement* — any new dependency must document what it provides that existing dependencies or the standard library cannot; (2) a *pinning strategy* — direct dependencies pinned via lock file; no floating version ranges in production artifacts; (3) a *review checklist* that the Adversary applies on every PR introducing a new dependency (see Phase 3, item 7). For projects on a security-critical path, the policy MAY extend to OpenSSF Scorecard requirements or equivalent maintenance and provenance criteria.[^openssf]
+
 The human developer describes the feature intent to the Builder. The Builder then produces a **formal specification document** for each unit of work. Critically, this phase doesn't just define *what* the software does — it defines *what must be provable about it* and structures the architecture accordingly.
 
 **Step 1a: Behavioural Specification**
@@ -222,6 +226,7 @@ The verified, test-passing codebase — along with the spec and test suite — i
 4. **Security Surface:** Input validation gaps, injection vectors, authentication/authorisation assumptions.
 5. **Spec Gaps Revealed by Implementation:** Sometimes writing the code reveals that the spec was incomplete. The Adversary looks for implemented behavior that isn't covered by the spec.
 6. **Process Properties:** For PRs — branch used, CI green, documentation updated, change traceable to a spec requirement.
+7. **Dependency Surface:** For any PR that introduces a new dependency — is the addition justified by the spec? Does it respect the Constitution's dependency hygiene policy? Are there known CVEs in the current version? Is the package actively maintained, or abandoned upstream? Does the transitive graph introduce surface area the spec did not anticipate? The Adversary flags any dependency addition that lacks an explicit justification traceable to a spec requirement or that fails the Constitution's hygiene checklist. An AI-generated implementation that silently reaches for a third-party package to solve a problem the standard library could handle is an over-scoped dependency, not a Builder judgment call — flag it the same way over-editing is flagged.[^dekens]
 
 **Negative Prompting:** The Adversary is configured for zero tolerance. No "overall this looks good, but..." preamble. Every piece of feedback is a concrete flaw with a specific location and a proposed fix or question.
 
@@ -324,6 +329,16 @@ VSDD is explicitly designed for multi-model AI workflows:
 
 **Tracker Tooling:** The Tracker role can be fulfilled by any issue system that supports two required structural practices: (1) external enforcement of issue assignment before code edits — a hook that blocks edits without an active issue, not a prompt to remember; (2) session-survivable active-item state — a fresh session can identify the current work item without re-reading the conversation. The Tracker holds work item state (which item is active, dependencies, blockers); the repo holds artifact content (specs, TDD logs, handoff notes). Reference implementation: [Chainlink](https://github.com/dollspace-gay/chainlink) — local SQLite with Claude Code hooks. Team alternatives (GitHub Issues, Linear) require the structural practices to be implemented via hooks and issue templates.[^chainlink]
 
+**Hosted AI and Spec Confidentiality.** VSDD is designed as an AI-orchestrated workflow — but Phase 1 artifacts (Constitution, Spec, Verification Architecture) are typically the most information-dense documents in any project. They encode business logic, architectural constraints, quality goals, edge cases, and security posture in structured, machine-readable form. Pasting them into a hosted AI service externalises that structure in ways that may not be intended, and the pattern compounds: workflow logic, requirement categories, and architectural decisions can reveal sensitive methodology even when framed as a coding request.[^dekens]
+
+This is an obvious caution — but it deserves explicit treatment precisely because VSDD is AI-first and the temptation to route everything through a capable hosted model is high. The mitigation is structural, not motivational:
+
+- **Local model for Phase 1.** Run Spec Crystallization against a local model (Ollama, LM Studio, or equivalent) rather than a hosted service. The Builder produces the Constitution, Spec, and Verification Architecture locally; these become committed, versioned repo artifacts. Downstream phases — where the sensitive spec is already in the repo rather than in a prompt — can use hosted models without additional exposure.
+- **Manual Spec Crystallization.** Author the spec as a human-first document; use AI only for the Phase 1c adversarial review, not the generative steps 1a–1b. Slower, but the spec content never leaves the local environment in prompt form. For practitioners using a structured documentation pipeline (e.g., Daedalus[^daedalus]) that can run without AI enrichment, the non-AI execution path is the privacy-safe route: run the pipeline, commit the artifacts, then invoke AI only at the review gate. For teams with strong domain expertise, this is often the right call regardless of confidentiality — the spec should reflect the Architect's understanding, not the Builder's inference from a requirements paragraph.
+- **Enterprise hosting with appropriate data handling agreements.** Where local models are insufficient for the task, a self-hosted or enterprise-tier deployment of the AI service with contractual data handling terms is the middle path.
+
+The underlying principle is Core Principle 8 applied to data: structure the workflow so sensitive content doesn't reach hosted services in prompt form in the first place, rather than trusting that the Builder will exercise discretion about what to include.
+
 **Prompt Engineering for TDD Discipline:** The Builder must be explicitly instructed: *"You are operating under strict TDD. Write tests FIRST. Do NOT write implementation code until I confirm all tests fail. When implementing, write the MINIMUM code to pass each test."* Without this constraint, AI models will naturally try to write implementation and tests simultaneously.
 
 ---
@@ -381,3 +396,9 @@ For rapid prototyping or throwaway scripts, use the parts that make sense — TD
 [^codeleash]: CodeLeash (2024). Constraint-based agentic TDD framework. https://codeleash.dev/
 
 [^rlm]: doubleuuser (2024). RLM Workflow: Repository-centric Language Model workflow. https://skills.sh/doubleuuser/rlm-workflow/rlm-workflow
+
+[^dekens]: Dekens, N. (2026). Vibe Coding Is Becoming an OSINT Risk. https://www.dutchosintguy.com/post/vibe-coding-is-becoming-an-osint-risk
+
+[^openssf]: Open Source Security Foundation (OpenSSF). Scorecard: Security health metrics for open source projects. https://securityscorecards.dev/
+
+[^daedalus]: Daw, A. (2026). Daedalus: Architecture documentation pipeline. https://github.com/adamdaw/daedalus
