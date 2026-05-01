@@ -51,7 +51,7 @@ The only creativity in the pipeline that shapes the outcome. Generates the probl
 #### The Builder *(Claude or equivalent AI)*
 
 **Constraints**
-Scope-bound to the spec — implements only what the spec authorises. Cannot make architectural decisions; surfaces ambiguities to the Architect rather than resolving them unilaterally. No implementation code without a prior failing test. No commits to main; all work on branches with a PR required. Output authority is limited to: implementation, tests, and documentation updates.
+Scope-bound to the spec — implements only what the spec authorises. Cannot make architectural decisions; surfaces ambiguities to the Architect rather than resolving them unilaterally. No implementation code without a prior failing test. No commits to main; all work on branches with a PR required — enforced by branch protection rules and a pre-push hook that rejects direct pushes to main (Core Principle 8). Output authority is limited to: implementation, tests, and documentation updates.
 
 **Context**
 Needs: the converged spec, the test suite, and the current work item. Does *not* need stakeholder conversation history, prior failed approaches (anchors on wrong paths), or the Adversary's full review history. Fresh context per session is recommended to prevent accumulated bias.
@@ -155,7 +155,7 @@ The complete spec — behavioural contracts *and* verification architecture — 
 - **Purity boundary violations** — logic marked as "pure core" that actually depends on external state
 - **Verification tool mismatches** — properties the selected tooling can't actually prove
 
-The spec is iterated until the Adversary can't find legitimate holes in either the behavioural contract or the verification strategy.
+The spec is iterated until the Adversary can't find legitimate holes in either the behavioural contract or the verification strategy. This gate should be enforced structurally: no test suite generation begins until a recorded Adversary pass on the spec is committed to the repository. A pre-Phase-2 hook that checks for this record is the structural implementation (Core Principle 8).
 
 **Tracker Integration:** Each spec maps to a work item. Sub-items are generated for each behavioural contract item, edge case, non-functional requirement, *and* each formally provable property. The provable properties get their own work item chain so their status is tracked independently from test coverage.
 
@@ -247,7 +247,7 @@ The verification architecture designed in Phase 1b is now *executed* against the
 - **Mutation Testing:** Tools like **mutmut** or **Stryker** mutate the code to verify the test suite actually catches real bugs. If a mutation survives, the test suite has a gap.
 - **Purity Boundary Audit:** A final check that the purity boundaries defined in Phase 1b have been respected throughout implementation. Any side effects that crept into the pure core during development are flagged and refactored out.
 
-All formal verification and fuzzing results feed back into Phase 4 if issues are found.
+All formal verification and fuzzing results feed back into Phase 4 if issues are found. Phase 5 checks are CI gates — formal proofs, fuzz results, mutation test kill rates, and purity boundary audit outcomes must all pass as structural prerequisites before Phase 6 convergence can be declared. These are hook-enforced, not self-certified (Core Principle 8).
 
 ---
 
@@ -312,6 +312,8 @@ VSDD is explicitly designed for multi-model AI workflows:
 - **The Human** is not a bottleneck — they're the strategic layer. They approve specs, resolve disputes, and make judgment calls that AI can't. The human's role is *elevated*, not diminished, by the AI orchestration.
 
 **Session Handoff Notes (all roles):** When any work session ends — whether by context compression, explicit reset, or natural close — a handoff note is committed to the repository for the active work item: current state, decisions made this session, blockers, and the immediate next step. The note's *content* lives in the repo (Repo-as-Source-of-Truth — this is a phase artifact, not a conversation); the *active item pointer* lives in the Tracker. A fresh session reads the handoff note from the repo before touching any code or spec. This applies to every role: the Builder records implementation state; the Adversary records what converged and what remains open; the Architect records decisions made. The Tracker is not the repository for handoff note content — the repo is.[^chainlink]
+
+**Session Logs as Fallback Artifacts:** A session log — a verbose narrative of the full session: what was done, what was decided, what was discovered, what remains open — is committed to the repository at session close as a fallback artifact. Where a structured handoff note exists, the session log is supplementary. Where a session ends abruptly (context compression, unexpected reset) without a clean handoff note, the session log is the recovery artifact — it provides the full context a structured handoff note deliberately compresses away. Stored in a consistent location within the repo (e.g., `.vsdd/sessions/YYYY-MM-DD.md`), it ensures that no session's work is irrecoverable.
 
 **Tracker Tooling:** The Tracker role can be fulfilled by any issue system that supports two required structural practices: (1) external enforcement of issue assignment before code edits — a hook that blocks edits without an active issue, not a prompt to remember; (2) session-survivable active-item state — a fresh session can identify the current work item without re-reading the conversation. The Tracker holds work item state (which item is active, dependencies, blockers); the repo holds artifact content (specs, TDD logs, handoff notes). Reference implementation: [Chainlink](https://github.com/dollspace-gay/chainlink) — local SQLite with Claude Code hooks. Team alternatives (GitHub Issues, Linear) require the structural practices to be implemented via hooks and issue templates.[^chainlink]
 
