@@ -125,10 +125,17 @@ The human developer describes the feature intent to the Builder. The Builder the
 
 The Builder produces the functional contract:
 
-- **Behavioural Contract:** What the module/function/endpoint *must* do, expressed as preconditions, postconditions, and invariants.
+- **Behavioural Contract:** What the module/function/endpoint *must* do, expressed as preconditions, postconditions, and invariants. Requirements are written in **EARS format** (Easy Approach to Requirements Syntax)[^ears] — five patterns that eliminate ambiguity by mandating SHALL or MUST and forbidding *should*, *may*, *could*, *might*:
+  - *Ubiquitous:* `The system SHALL <action>.`
+  - *Event-Driven:* `WHEN <trigger>, the system SHALL <action>.`
+  - *State-Driven:* `WHILE <state>, the system SHALL <action>.`
+  - *Optional Feature:* `WHERE <feature is included>, the system SHALL <action>.`
+  - *Unwanted Behaviour:* `IF <condition>, THEN the system SHALL <response>.`
+  Each requirement receives a unique identifier (REQ-NNN) that traces through the full contract chain: REQ-NNN → test case → implementation → adversarial review → formal proof.
 - **Interface Definition:** Input types, output types, error types. No ambiguity. If it's an API, this is the OpenAPI/GraphQL schema. If it's a module, this is the type signature and doc contract.
-- **Edge Case Catalog:** Explicitly enumerated boundary conditions, degenerate inputs, and failure modes. The Builder is prompted to be *exhaustive* here — "What happens when the input is null? Empty? Maximum size? Negative? Unicode? Concurrent?"
+- **Edge Case Catalog:** Explicitly enumerated boundary conditions, degenerate inputs, and failure modes. The Builder is prompted to be *exhaustive* here — "What happens when the input is null? Empty? Maximum size? Negative? Unicode? Concurrent?" Each edge case receives a REQ-NNN identifier and traces to a dedicated test.
 - **Non-Functional Requirements:** Performance bounds, memory constraints, security considerations baked into the spec itself.
+- **Security Clauses (security-critical paths):** For any feature on a security-critical path (authentication, authorisation, financial calculation, data handling), the Behavioural Contract includes constitutional security clauses in CSDD format[^marri]: each clause has a SEC-NNN identifier, a CWE reference (e.g., CWE-89 SQL Injection), a MUST/SHOULD/MAY level, an implementation pattern, and an enforcement mechanism (static analysis rule, merge blocker). MUST-level violations reject the implementation and require a rewrite. This layer is optional for non-security-critical features and mandatory for those that are. Empirical basis: constitutional security constraints reduce security defects by 73% compared to unconstrained AI generation with no velocity degradation.[^marri]
 
 **Step 1b: Verification Architecture**
 
@@ -272,7 +279,7 @@ VSDD inherits VDD's **hallucination-based termination**, extended across all thr
 One of VSDD's defining properties is **full traceability**. Every artifact links back:
 
 ```
-Constitution → Spec Requirement → Verification Property → Work Item → Test Case → Implementation → Adversarial Review → Formal Proof
+Constitution → REQ-NNN → Verification Property → Work Item → Test Case → Implementation → Adversarial Review → Formal Proof
 ```
 
 At any point, you can ask: *"Why does this line of code exist?"* and trace it all the way back to a specific spec requirement, through the verification property it satisfies, the test that demanded it, the adversarial review that hardened it, and the formal proof that guarantees it. Equally, you can ask *"Why is this module structured as a pure function?"* and trace that decision back to the Purity Boundary Map in Phase 1b.
@@ -323,6 +330,10 @@ VSDD is explicitly designed for multi-model AI workflows:
 
 ### **VII. When to Use VSDD**
 
+**Ecosystem positioning:** On Piskala's three-level SDD rigor taxonomy[^piskala], VSDD sits at **L2+ (Spec-Anchored with formal hardening approaching L3)**. L2 (Spec-Anchored) means the spec is maintained through the full project lifecycle, every change requires an addendum, and full REQ→test→implementation→review traceability is enforced. VSDD adds Phase 5 formal hardening (Kani/TLA+) that pure L2 frameworks do not have, without going full L3 (Spec-as-Source, where code is generated directly from the spec and not manually edited).
+
+**Calibration heuristic (Piskala):** Before choosing a rigor level, answer one question: *"How many times in the past year did someone ask about requirements-to-test traceability?"* Zero times — L1 (Spec-First) is sufficient. Once — move to L2 (VSDD). More than once, or if the project has a greater than 80% chance of being audited — L2 (VSDD) plus CSDD security clauses for the security-critical paths.[^piskala]
+
 VSDD is high-ceremony by design. It's worth the overhead when:
 
 - Correctness is non-negotiable (financial systems, medical software, infrastructure)
@@ -356,6 +367,12 @@ For rapid prototyping or throwaway scripts, use the parts that make sense — TD
 [^over-editing]: Nrehiew (2026). Coding Models Are Doing Too Much. https://nrehiew.github.io/blog/minimal_editing/
 
 [^snell]: Snell, C., Klein, D., & Zhong, V. (2022). Learning by Distilling Context. arXiv:2209.15189. https://arxiv.org/abs/2209.15189
+
+[^ears]: Mavin, A. (2009). EARS (Easy Approach to Requirements Syntax). IEEE International Requirements Engineering Conference. Originally developed at Rolls-Royce aerospace; eliminates modal ambiguity in requirement statements.
+
+[^marri]: Marri, S. R. (2026). Constitutional Spec-Driven Development: Enforcing Security by Construction in AI-Assisted Code Generation. arXiv:2602.02584. https://arxiv.org/abs/2602.02584
+
+[^piskala]: Piskala, D. B. (2026). Spec-Driven Development: From Code to Contract in the Age of AI Coding Assistants. AIWare 2026. arXiv:2602.00180. https://arxiv.org/abs/2602.00180
 
 [^chainlink]: dollspace (2024). Chainlink: local-first AI-native issue tracker. https://github.com/dollspace-gay/chainlink
 
