@@ -203,6 +203,8 @@ The Builder translates the spec directly into executable tests:
 
 **The Red Gate:** All tests must *fail* before any implementation begins. If a test passes without implementation, the test is suspect — it's either testing the wrong thing or the spec was wrong. The Builder flags this for human review. This gate should be enforced structurally: a pre-implementation hook that verifies at least one failing test exists before allowing code edits, consistent with External Enforcement over Persuasion (Core Principle 8).
 
+**Regression Test Verification (Red–Green–Revert cycle):** For bug fixes, the Red Gate has a stricter form. After writing the regression test: (1) confirm it *fails* on the broken code; (2) apply the fix and confirm the test *passes*; (3) *revert* the fix and confirm the test *fails* again; (4) restore the fix. A regression test that passes before the fix is applied was never testing the right thing — it cannot catch a regression. Only the three-step Red → Green → Revert → Red sequence proves the test is genuinely tied to the defect it is meant to guard against.
+
 **Step 2b: Minimal Implementation**
 
 The Builder writes the *minimum* code necessary to make each test pass, one at a time. This is classic TDD discipline:
@@ -232,13 +234,22 @@ Before handing off to the Adversary, the Builder performs a self-critique pass a
 
 The verified, test-passing codebase — along with the spec and test suite — is presented to the Adversary in a fresh context window. This is a **standing gate**: the Adversary runs on every PR before merge, not only at spec completion. The gate should be enforced structurally — a CI check or pre-merge hook that blocks merge without a recorded Adversary pass — not by relying on the Builder to remember to invoke it (Core Principle 8).
 
-**What the Adversary reviews:**
+Phase 3 runs as **two sequential passes**. Pass 2 is not dispatched until Pass 1 issues a clean result. This separation keeps each reviewer's question narrow and prevents code quality findings from displacing spec compliance gaps.
+
+**Pass 1 — Spec Compliance**
+
+The Adversary reads the implementation directly. It does *not* take the Builder's summary of what was done at face value — the Builder's report describes intent; the code describes fact. Discrepancies between them are findings. The Adversary verifies:
 
 1. **Spec Fidelity:** Does the implementation actually satisfy the spec, or did the tests inadvertently encode a misunderstanding? The Adversary treats the spec as a constitution: the implementation must satisfy it fully and explicitly, not approximately. There is no partial credit for "mostly implemented" or "intended to satisfy" — either the requirement is met, demonstrably, or it is not.[^constitutional]
-2. **Test Quality:** Are the tests actually testing what they claim? Are there tests that would pass even if the implementation were subtly wrong? (Tautological tests, tests that mock too aggressively, tests that assert on implementation details rather than behaviour.)
-3. **Code Quality:** Placeholder comments, generic error handling, inefficient patterns, hidden coupling, missing resource cleanup, race conditions.
-4. **Security Surface:** Input validation gaps, injection vectors, authentication/authorisation assumptions.
-5. **Spec Gaps Revealed by Implementation:** Sometimes writing the code reveals that the spec was incomplete. The Adversary looks for implemented behavior that isn't covered by the spec.
+2. **Spec Gaps Revealed by Implementation:** Sometimes writing the code reveals that the spec was incomplete. The Adversary looks for implemented behaviour that isn't covered by the spec — and for spec requirements that have no corresponding implementation the Builder failed to mention.
+
+Pass 1 findings require a return to Phase 1 or Phase 2 before Pass 2 is run.
+
+**Pass 2 — Code Quality** *(only after Pass 1 passes)*
+
+3. **Test Quality:** Are the tests actually testing what they claim? Are there tests that would pass even if the implementation were subtly wrong? (Tautological tests, tests that mock too aggressively, tests that assert on implementation details rather than behaviour.)
+4. **Code Quality:** Placeholder comments, generic error handling, inefficient patterns, hidden coupling, missing resource cleanup, race conditions.
+5. **Security Surface:** Input validation gaps, injection vectors, authentication/authorisation assumptions.
 6. **Process Properties:** For PRs — branch used, CI green, documentation updated, change traceable to a spec requirement.
 7. **Dependency Surface:** For any PR that introduces a new dependency — is the addition justified by the spec? Does it respect the Constitution's dependency hygiene policy? Are there known CVEs in the current version? Is the package actively maintained, or abandoned upstream? Does the transitive graph introduce surface area the spec did not anticipate? The Adversary flags any dependency addition that lacks an explicit justification traceable to a spec requirement or that fails the Constitution's hygiene checklist. An AI-generated implementation that silently reaches for a third-party package to solve a problem the standard library could handle is an over-scoped dependency, not a Builder judgment call — flag it the same way over-editing is flagged.[^dekens]
 
@@ -260,6 +271,8 @@ The Adversary's critique feeds back through the entire pipeline:
 - **New edge cases discovered** → Add to spec's Edge Case Catalog, write new failing tests, implement fixes.
 
 This loop continues until convergence (see Phase 6).
+
+**Loop Termination Signal — Architectural Escalation:** If the loop cycles on the same spec requirement or component more than three times without resolution — each fix attempt spawning a new Adversary finding at the same location — the issue is architectural, not implementational. Three failed fix attempts without convergence is the signal to *stop fixing* and escalate to the Architect: the spec or architecture is wrong, not the implementation. The Architect then decides whether to revise the spec, revise the architecture, or consciously accept a known limitation. Attempting a fourth fix without this escalation is almost always slower than surfacing the architectural problem directly — and the fix is nearly always wrong.
 
 ---
 
@@ -290,6 +303,8 @@ VSDD inherits VDD's **hallucination-based termination**, extended across all thr
 | **Edit minimality** | No unrequested structural changes — no nesting, branching, or control flow introduced beyond what each fix required. Diff scope matches work item scope. |
 
 **Maximum Viable Refinement** is reached when all four dimensions have converged. The software is considered **Zero-Slop** — every line of code traces to a spec requirement, is covered by a test, has survived adversarial scrutiny, and the critical path is formally proven.
+
+**Convergence requires evidence, not declaration.** The Adversary's convergence pass is not complete until the pass record — including the exact artifacts reviewed, the verification commands run, and the "Forced to manufacture flaws" declaration — is committed to the repository. A convergence claim unaccompanied by this record is an assertion without evidence and does not satisfy Principle 11.
 
 ---
 
@@ -336,6 +351,8 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 9. **Derivation Fidelity:** Every artifact derived from another artifact has a dedicated gate review — an adversarial check of how faithfully and completely the derived artifact captures its source. The gate chain: Clarified Requirements → Spec (**Gate 1**, Step 1c), Spec → Tests (**Gate 2**, Phase 3 item 2), Spec + Tests → Implementation (**Gate 3**, Phase 3), Spec invariants → Formal Proofs (**Gate 4**, Phase 5). At every gate, the Adversary receives only the source and derived artifacts — no deliberation records, no ADR content, no prior review history. The Adversary's independence at every gate is its defining property. This principle names the pattern already present in Steps 1c, Phase 3, and Phase 5, and extends it explicitly to the Requirements→Spec transition (Gate 1) — the gate most commonly skipped because it precedes the first line of code.
 
 10. **Four-Dimensional Convergence:** The system isn't done until specs, tests, implementation, *and* formal proofs have all independently survived adversarial review.
+
+11. **Evidence Before Assertions:** No actor may claim a phase artifact is complete, correct, or passing without fresh verification evidence. "Tests pass" requires a test runner output, not a recollection. "Implementation is complete" requires a line-by-line spec checklist, not an impression. "The Adversary found no issues" requires a recorded Adversary pass committed to the repository, not a Builder summary. Verification that was not freshly performed is not verification — it is memory, and memory degrades. This applies to every role and every phase: the Builder who submits without running the tests; the Adversary who declares convergence without checking every item; the Architect who signs off on a spec they haven't re-read against the requirements. The structural implementation is Principle 8 (External Enforcement): wherever possible, evidence generation is automated and the output is committed alongside the artifact it verifies. Where automation is unavailable, the evidence requirement is explicit — cite the run, attach the output, commit the record.
 
 ---
 
