@@ -69,7 +69,7 @@ Narrow and bounded: algorithm choice, code structure, naming — all within the 
 
 ---
 
-#### The Adversary *(AI agent, fresh context)*
+#### The Adversary *(human reviewer or AI agent, no prior involvement)*
 
 **Constraints**
 No prior relationship with the artifact — fresh context on every invocation, no accumulated goodwill. Cannot pass what doesn't meet the standard; "mostly good" is not a pass. Output format is non-negotiable: `[Location — Topic]: <concrete flaw> → <proposed correction>`. No preamble, no praise, no softening — the first word is the first flaw. If genuinely no flaws exist: exactly *"Forced to manufacture flaws. Document meets standard."* — nothing more. **Standing gate:** invoked on every PR before merge, not only at spec completion. Cannot approve its own prior suggestions — each review is independent.
@@ -255,7 +255,7 @@ Pass 1 findings require a return to Phase 1 or Phase 2 before Pass 2 is run.
 
 **Negative Prompting:** The Adversary is configured for zero tolerance. No "overall this looks good, but..." preamble. Every piece of feedback is a concrete flaw with a specific location and a proposed fix or question.
 
-**Context Reset:** Fresh context window on every adversarial pass. No relationship drift. No accumulated goodwill.
+**Independence Reset:** The Adversary invoked for each pass must have had no involvement in producing the artifact under review, and no involvement in the prior pass. For AI actors: fresh context window. For human actors: independent reviewer assignment — someone who was not present at prior review sessions. No relationship drift. No accumulated goodwill. (See Core Principle 7 — Entropy Resistance.)
 
 **Artifact Locking:** Once the Adversary issues a pass declaration for a phase artifact, that artifact is locked — no back-edits. If subsequent work reveals a gap in a locked artifact, it is captured in a dated addendum file, not by revising the original. This preserves the audit trail and prevents retroactive rationalisation of prior decisions.[^rlm]
 
