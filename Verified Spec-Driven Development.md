@@ -8,11 +8,11 @@
 
 - **Spec-Driven Development (SDD):** Define the contract before writing a single line of implementation. Specs are the source of truth.
 - **Test-Driven Development (TDD):** Tests are written *before* code. Red → Green → Refactor. No code exists without a failing test that demanded it.
-- **Verification-Driven Development (VDD):** Subject all surviving code to adversarial refinement until a hyper-critical reviewer is forced to hallucinate flaws.
+- **Verification-Driven Development (VDD):** Subject all surviving code to adversarial refinement until every dimension is closed by committed evidence — every finding dispositioned, no substantive defect left open.
 
 VSDD treats these not as competing philosophies but as **sequential gates** in a single pipeline. Specs define *what*. Tests enforce *how*. Adversarial verification ensures *nothing was missed*. AI models orchestrate every phase, with the human developer serving as the strategic decision-maker and final authority.
 
-VSDD is **actor-agnostic**: every role in the pipeline — Builder, Adversary, Tracker — can be fulfilled by a human, an AI agent, or a combination of both. Where the document references AI models, this describes the most common implementation; the principles hold equally for human practitioners. A team working VSDD with no AI involvement would apply the same gates, the same traceability requirements, and the same adversarial independence constraints. The AI layer accelerates execution. The structure is independent of who executes it.
+VSDD is **actor-agnostic in its execution roles**: the Builder, Adversary, and Tracker can each be fulfilled by a human, an AI agent, or a combination of both. The **Architect is the deliberate exception** — the irreducible human authority that frames the problem, owns every gate decision, and accepts or rejects convergence; this role is not delegable to an AI (see the toolchain in §I and the Architect's 5Cs characterisation in §II). Where the document references AI models, this describes the most common implementation of the execution roles; the principles hold equally for human practitioners. A team working VSDD with no AI involvement would apply the same gates, the same traceability requirements, and the same adversarial independence constraints. The AI layer accelerates execution of the Builder, Adversary, and Tracker; the structure — and the human Architect at its head — is independent of how those three roles are executed.
 
 ---
 
@@ -239,6 +239,8 @@ The Builder translates the spec directly into executable tests:
 
 **Regression Test Verification (Red–Green–Revert cycle):** For bug fixes, the Red Gate has a stricter form. After writing the regression test: (1) confirm it *fails* on the broken code; (2) apply the fix and confirm the test *passes*; (3) *revert* the fix and confirm the test *fails* again; (4) restore the fix. A regression test that passes before the fix is applied was never testing the right thing — it cannot catch a regression. Only the four-step Red → Green → Revert → Red sequence proves the test is genuinely tied to the defect it is meant to guard against.
 
+**Gate 3 — Tests vs Spec (before any implementation).** With the suite written and red, a fresh-context Adversary reviews the tests against the Spec, receiving only those two artifacts. *Verdict:* every behavioural-contract item and Gherkin scenario maps to a test; each test is a faithful derivation of the acceptance criteria, not of an assumed implementation; every logic branch is planned; no test is tautological or over-mocked; the Red Gate holds. Findings return to Step 3a (fix the tests) or Phase 2 (fix the Spec). No implementation is written until Gate 3 has a committed pass record (Core Principle 8). Reviewing the tests *here* — before code exists — is what makes the gate real: the reviewer cannot rationalise a test to match an implementation it has never seen.
+
 **Step 3b: Minimal Implementation**
 
 The Builder writes the *minimum* code necessary to make each test pass, one at a time. This is classic TDD discipline:
@@ -270,9 +272,9 @@ The verified, test-passing codebase — along with the spec and test suite — i
 
 Phase 4 runs as **two sequential passes**. Pass 2 is not dispatched until Pass 1 issues a clean result. This separation keeps each reviewer's question narrow and prevents code quality findings from displacing spec compliance gaps.
 
-**Pass 1 — Spec Compliance**
+**Pass 1 — Spec & Test Compliance (Gate 4)**
 
-The Adversary reads the implementation directly. It does *not* take the Builder's summary of what was done at face value — the Builder's report describes intent; the code describes fact. Discrepancies between them are findings. The Adversary verifies:
+The Adversary reads the implementation directly, against **both the Spec and the test suite** (Gate 4 — Spec + Tests → Implementation). It does *not* take the Builder's summary of what was done at face value — the Builder's report describes intent; the code describes fact. Discrepancies between the implementation and either the Spec or the tests are findings. The Adversary verifies:
 
 1. **Spec Fidelity:** Does the implementation actually satisfy the spec, or did the tests inadvertently encode a misunderstanding? The Adversary treats the spec as a constitution — borrowing the framing of Constitutional AI[^constitutional] as an analogy, not as evidence (there the "constitution" governs model training; here it is the behavioural spec, enforced by adversarial review rather than RL). The implementation must satisfy the spec fully and explicitly, not approximately. There is no partial credit for "mostly implemented" or "intended to satisfy" — either the requirement is met, demonstrably, or it is not.
 2. **Spec Gaps Revealed by Implementation:** Sometimes writing the code reveals that the spec was incomplete. The Adversary looks for implemented behaviour that isn't covered by the spec — and for spec requirements that have no corresponding implementation the Builder failed to mention.
@@ -321,22 +323,22 @@ The verification architecture designed in Phase 2b is now *executed* against the
 - **Mutation Testing:** Tools like **mutmut** or **Stryker** mutate the code to verify the test suite actually catches real bugs. Every surviving mutant is a signal: it is either killed by a new or strengthened test, or committed with a written justification that it is an equivalent mutant no test can kill. No surviving mutant is left unreviewed.
 - **Purity Boundary Audit:** A final check that the purity boundaries defined in Phase 2b have been respected throughout implementation. Any side effects that crept into the pure core during development are flagged and refactored out.
 
-All formal verification and fuzzing results feed back into Phase 5 if issues are found. Phase 6 checks are CI gates — formal proofs, fuzz results, every mutation survivor triaged (killed or justified as equivalent), and purity boundary audit outcomes must all pass as structural prerequisites before Phase 7 convergence can be declared. These are hook-enforced, not self-certified (Core Principle 8).
+All formal verification and fuzzing results feed back into Phase 5 if issues are found. Phase 6 checks are CI gates — formal proofs, fuzz results, every mutation survivor triaged (killed or justified as equivalent), and purity boundary audit outcomes must all pass as structural prerequisites before Phase 7 convergence can be declared. These are hook-enforced, not self-certified (Core Principle 8). This is **Gate 5 — Proofs vs Spec invariants**, and its adversary is deterministic: the prover, fuzzer, and mutation-tester are maximally-hostile reviewers that cannot be flattered or fatigued. Formal verification *is* adversarial review executed by tooling — the point where Principle 8 (external enforcement) and Principle 9 (derivation fidelity) become the same act. The gate passes only when every Phase 2b property has a committed proof or verification result.
 
 ---
 
 #### **Phase 7 — Convergence (The Exit Signal)**
 
-VSDD inherits VDD's **hallucination-based termination**, extended across every layer of the derivation chain:
+Convergence is declared **per dimension by committed evidence**, never by a reviewer's sense that an artifact is "done." A dimension has converged when its gate carries a committed pass record and **every finding it produced — whether raised by an adversary or by tooling (static analysis, fuzzer, mutation tester) — has been either resolved-and-applied or given an explicit, committed Architect sign-off** (accept-with-rationale, or defer as a tracked follow-up). Nothing proceeds past a gate on an un-signed-off finding, **at any severity** — there is no severity cutoff that lets a defect through unexamined. Severity orders the work and informs the Architect's decision; it never substitutes for it. The disposition policy and the fuzz/coverage budgets referenced below are fixed in the Constitution.
 
-| Dimension | Convergence Signal |
+| Dimension | Convergence criterion (objective, committed) |
 | --- | --- |
-| **Requirements (SRS)** | Gate 1 cleared with no open findings; the Adversary's SRS critiques are wording nitpicks, not missing requirements, absent stakeholders, or unhandled edge cases. |
-| **Spec** | The Adversary's spec critiques are nitpicks about wording, not about missing behaviour, ambiguity, or verification gaps. |
-| **Tests** | The Adversary can't identify a meaningful untested scenario. Every surviving mutant has been killed or justified as equivalent. |
-| **Implementation** | The Adversary is forced to invent problems that don't exist in the code. |
-| **Verification** | All properties from the Phase 2b catalog pass formal proof. Fuzzers find nothing. Purity boundaries are intact. |
-| **Edit minimality** | No unrequested structural changes — no nesting, branching, or control flow introduced beyond what each fix required. Diff scope matches work item scope. |
+| **Requirements (SRS)** | Gate 1 pass record committed; every finding dispositioned, no substantive finding left open. |
+| **Spec** | Gate 2 pass record committed; every finding dispositioned, no substantive finding left open. |
+| **Tests** | Gate 3 pass record committed; every behavioural-contract item and Gherkin scenario maps to a test; every mutation survivor killed or justified as equivalent. |
+| **Implementation** | Gate 4 pass record committed; every adversary finding dispositioned; static analysis run, and every analyzer finding either fixed or carrying an explicit committed Architect sign-off (no severity auto-pass). |
+| **Verification** | Gate 5: every Phase 2b property has a committed proof or verification result; the fuzz campaign ran to its agreed budget with no open crash; purity-boundary audit clean. |
+| **Edit minimality** | Diff scope matches the work-item scope; no structural change — nesting, branching, control flow — beyond what each fix required. |
 
 **Maximum Viable Refinement** is reached when every dimension has converged. The software meets the **Zero-Slop** bar — the convergence table above with every row green — meaning every line of code traces to an SRS requirement (REQ-NNN) through its spec contract, is covered by a test, has survived adversarial scrutiny, and the critical path is formally proven.
 
@@ -358,7 +360,7 @@ Work Item → Test Case
 Implementation
   ↓ [Gate 4: Adversary — Implementation vs Spec + Tests]
 Formal Proof
-  ↓ [Gate 5: Adversary — Proofs vs Spec invariants]
+  ↓ [Gate 5: Deterministic verifier — Proofs vs Spec invariants]
 ```
 
 At any point, you can ask: *"Why does this line of code exist?"* and trace it all the way back to a specific spec requirement, through the verification property it satisfies, the test that demanded it, the adversarial review that hardened it, and the formal proof that guarantees it. Equally, you can ask *"Why is this module structured as a pure function?"* and trace that decision back to the Purity Boundary Map in Phase 2b.
@@ -385,7 +387,7 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 
 8. **External Enforcement over Persuasion:** Phase gates must be enforced by deterministic, non-AI scripts wherever possible — exit-code CI checks, pre-commit hooks, test runners — not by asking the Builder or Adversary to self-certify. AI confirmation of AI output is not a gate; a process that exits `1` on failure is. Prompts and instructions constrain agent behaviour at the soft level; tooling enforces it at the hard level. Where possible, validation at each phase gate should be zero-token: deterministic scripts, not LLM review.[^codeleash]
 
-9. **Derivation Fidelity:** Every artifact derived from another artifact has a dedicated gate review — an adversarial check of how faithfully and completely the derived artifact captures its source. The gate chain: Intent → SRS (**Gate 1**, Phase 1 Step 1b), SRS → Spec (**Gate 2**, Phase 2 Step 2c), Spec → Tests (**Gate 3**, Phase 4 Pass 2), Spec + Tests → Implementation (**Gate 4**, Phase 4 Pass 1), Spec invariants → Formal Proofs (**Gate 5**, Phase 6). At every gate, the Adversary receives only the source and derived artifacts — no deliberation records, no ADR content, no prior review history. The Adversary's independence at every gate is its defining property. This principle extends the pattern explicitly to the Intent→SRS transition (Gate 1) — the gate most commonly skipped because it precedes the first design decision.
+9. **Derivation Fidelity:** Every artifact derived from another artifact has a dedicated gate review — an adversarial check of how faithfully and completely the derived artifact captures its source. The gate chain: Intent → SRS (**Gate 1**, Phase 1 Step 1b), SRS → Spec (**Gate 2**, Phase 2 Step 2c), Spec → Tests (**Gate 3**, Phase 3 — reviewed before implementation exists), Spec + Tests → Implementation (**Gate 4**, Phase 4 Pass 1), Spec invariants → Formal Proofs (**Gate 5**, Phase 6 — a deterministic verification gate). At Gates 1–4 the Adversary receives only the source and derived artifacts — no deliberation records, no ADR content, no prior review history — and its independence is its defining property. At Gate 5 the adversary is deterministic tooling (prover, fuzzer, mutation-tester): a verifier has no goodwill to accumulate, so independence holds by construction. This principle extends the pattern explicitly to the Intent→SRS transition (Gate 1) — the gate most commonly skipped because it precedes the first design decision.
 
 10. **Full-Chain Convergence:** The system isn't done until requirements, specs, tests, implementation, *and* formal proofs have all independently survived adversarial review.
 
