@@ -131,6 +131,8 @@ A Socratic dialog agent — or a structured deliberation session — asks questi
 
 **What the Adversary does NOT receive:** the deliberation record or ADR content. The Adversary at every gate receives only the source artifact and the artifact derived from it — at Gate 1, the original feature request and the SRS; nothing more. This boundary is not a convenience; it is the mechanism that preserves the Adversary's independence. An Adversary that knows *why* a requirement was written the way it was will probe against the specifier's reasoning rather than independently arriving at whether the conclusion is sound. The gap between what the specifier intended and what the Adversary independently finds *is* the value of the gate. Collapsing that gap by sharing the deliberation defeats the purpose.[^superpowers]
 
+**Mockups as elicitation.** For requirements that are easier to *see* than to describe — anything operator- or UI-facing — a low-fidelity mockup (a throwaway HTML/CSS page, a wireframe, a clickable prototype) is often the fastest way to settle intent with stakeholders. A business owner who cannot articulate a requirement in the abstract will react decisively to a concrete screen, and the disagreements surface while they are still cheap to resolve. The mockup is an **elicitation aid, not a design commitment**: what it surfaces is written back into the SRS as observable behaviour (the *what*), and the mock itself is throwaway — it does not constrain the SDD's implementation choices (the *how*), and it is not an Adversary input. Treat it like the deliberation record — a human-facing instrument for reaching agreement, discarded once that agreement is captured as requirements.
+
 **Step 1a — Authoring the SRS (tiered to the unit of work)**
 
 The weight of the SRS is keyed to the decomposition unit:
@@ -181,7 +183,7 @@ The Builder encodes the SRS's requirements into the functional contract:
 
 - **Behavioural Contract:** What the module/function/endpoint *must* do, expressed as preconditions, postconditions, and invariants. Each EARS requirement from the SRS (REQ-NNN) is encoded here as a formal contract clause; the identifier carries through to the test case, implementation, adversarial review, and formal proof.
 - **Interface Definition:** Input types, output types, error types. No ambiguity. If it's an API, this is the OpenAPI/GraphQL schema. If it's a module, this is the type signature and doc contract.
-- **Edge Case Catalog:** Explicitly enumerated boundary conditions, degenerate inputs, and failure modes. The Builder is prompted to be *exhaustive* here — "What happens when the input is null? Empty? Maximum size? Negative? Unicode? Concurrent?" Each edge case receives a REQ-NNN identifier and traces to a dedicated test.
+- **Edge Case Catalog:** Explicitly enumerated boundary conditions, degenerate inputs, and failure modes. The Builder is prompted to be *exhaustive* here — "What happens when the input is null? Empty? Maximum size? Negative? Unicode? Concurrent?" Edge cases already enumerated in the SRS carry their existing REQ-NNN; any edge case first surfaced here is written back into the SRS and minted a REQ-NNN there, not numbered independently in the SDD. Each traces to a dedicated test.
 - **Non-Functional Requirements:** Performance bounds, memory constraints, security considerations baked into the spec itself.
 - **Security Clauses (security-critical paths):** For any feature on a security-critical path (authentication, authorisation, financial calculation, data handling), the Behavioural Contract includes constitutional security clauses in CSDD format[^marri]: each clause has a SEC-NNN identifier, a CWE reference (e.g., CWE-89 SQL Injection), a MUST/SHOULD/MAY level, an implementation pattern, and an enforcement mechanism (static analysis rule, merge blocker). MUST-level violations reject the implementation and require a rewrite. This layer is optional for non-security-critical features and mandatory for those that are. Empirical basis: constitutional security constraints reduce security defects by 73% compared to unconstrained AI generation with no velocity degradation.[^marri]
 
@@ -266,7 +268,7 @@ Before handing off to the Adversary, the Builder performs a self-critique pass a
 
 The verified, test-passing codebase — along with the spec and test suite — is presented to the Adversary in a fresh context window. This is a **standing gate**: the Adversary runs on every PR before merge, not only at spec completion. The gate should be enforced structurally — a CI check or pre-merge hook that blocks merge without a recorded Adversary pass — not by relying on the Builder to remember to invoke it (Core Principle 8).
 
-Phase 3 runs as **two sequential passes**. Pass 2 is not dispatched until Pass 1 issues a clean result. This separation keeps each reviewer's question narrow and prevents code quality findings from displacing spec compliance gaps.
+Phase 4 runs as **two sequential passes**. Pass 2 is not dispatched until Pass 1 issues a clean result. This separation keeps each reviewer's question narrow and prevents code quality findings from displacing spec compliance gaps.
 
 **Pass 1 — Spec Compliance**
 
@@ -298,9 +300,9 @@ Pass 1 findings require a return to Phase 2 or Phase 3 before Pass 2 is run.
 The Adversary's critique feeds back through the entire pipeline:
 
 - **Requirements-level flaws** → Return to Phase 1. Refine the SRS, re-review at Gate 1.
-- **Spec-level flaws** → Return to Phase 2. Update the spec, re-review.
+- **Spec-level flaws** → Return to Phase 2. Update the spec, re-review at Gate 2.
 - **Test-level flaws** → Return to Phase 3a. Fix or add tests, verify they fail against the current implementation (or a deliberately broken version), then fix implementation if needed.
-- **Implementation-level flaws** → Return to Phase 3c. Refactor, ensure all tests still pass.
+- **Implementation-level flaws** → Return to Phase 3b. Re-implement minimally, then refactor (3c); ensure all tests still pass.
 - **New edge cases discovered** → Add to spec's Edge Case Catalog, write new failing tests, implement fixes.
 
 This loop continues until convergence (see Phase 7).
@@ -313,7 +315,7 @@ This loop continues until convergence (see Phase 7).
 
 The verification architecture designed in Phase 2b is now *executed* against the battle-tested implementation. Because the codebase was architected from the start with a pure core and clear purity boundaries, formal verification tools can operate on it without heroic refactoring.
 
-- **Proof Execution:** The property specifications drafted in Phase 2b (Kani harnesses, Dafny contracts, TLA+ invariants, etc.) are run against the implementation. Because the architecture was designed for verifiability, these proofs should engage cleanly with the pure core. Failures here indicate either implementation bugs or spec properties that need refinement — both feed back through Phase 4.
+- **Proof Execution:** The property specifications drafted in Phase 2b (Kani harnesses, Dafny contracts, TLA+ invariants, etc.) are run against the implementation. Because the architecture was designed for verifiability, these proofs should engage cleanly with the pure core. Failures here indicate either implementation bugs or spec properties that need refinement — both feed back through Phase 5.
 - **Fuzz Testing:** Structured fuzzing (AFL++, libFuzzer, cargo-fuzz) is layered on top of property-based tests to find inputs that no human or AI anticipated. The deterministic core is an ideal fuzz target because it has no environmental dependencies to mock.
 - **Security Hardening:** Suites like **Wycheproof** (cryptographic edge cases) and **Semgrep** (static analysis) are run as CI/CD gates.
 - **Mutation Testing:** Tools like **mutmut** or **Stryker** mutate the code to verify the test suite actually catches real bugs. If a mutation survives, the test suite has a gap.
@@ -325,17 +327,18 @@ All formal verification and fuzzing results feed back into Phase 5 if issues are
 
 #### **Phase 7 — Convergence (The Exit Signal)**
 
-VSDD inherits VDD's **hallucination-based termination**, extended across all three dimensions:
+VSDD inherits VDD's **hallucination-based termination**, extended across every layer of the derivation chain:
 
 | Dimension | Convergence Signal |
 | --- | --- |
+| **Requirements (SRS)** | Gate 1 cleared with no open findings; the Adversary's SRS critiques are wording nitpicks, not missing requirements, absent stakeholders, or unhandled edge cases. |
 | **Spec** | The Adversary's spec critiques are nitpicks about wording, not about missing behaviour, ambiguity, or verification gaps. |
 | **Tests** | The Adversary can't identify a meaningful untested scenario. Mutation testing confirms high kill rate. |
 | **Implementation** | The Adversary is forced to invent problems that don't exist in the code. |
 | **Verification** | All properties from the Phase 2b catalog pass formal proof. Fuzzers find nothing. Purity boundaries are intact. |
 | **Edit minimality** | No unrequested structural changes — no nesting, branching, or control flow introduced beyond what each fix required. Diff scope matches work item scope. |
 
-**Maximum Viable Refinement** is reached when all four dimensions have converged. The software is considered **Zero-Slop** — every line of code traces to a spec requirement, is covered by a test, has survived adversarial scrutiny, and the critical path is formally proven.
+**Maximum Viable Refinement** is reached when every dimension has converged. The software is considered **Zero-Slop** — every line of code traces to an SRS requirement (REQ-NNN) through its spec contract, is covered by a test, has survived adversarial scrutiny, and the critical path is formally proven.
 
 **Convergence requires evidence, not declaration.** The Adversary's convergence pass is not complete until the pass record — including the exact artifacts reviewed, the verification commands run, and the "Forced to manufacture flaws" declaration — is committed to the repository. A convergence claim unaccompanied by this record is an assertion without evidence and does not satisfy Principle 11.
 
@@ -346,9 +349,9 @@ VSDD inherits VDD's **hallucination-based termination**, extended across all thr
 One of VSDD's defining properties is **full traceability**. Every artifact links back:
 
 ```
-Intent → Deliberation → SRS (Clarified Requirements)
+Intent → Deliberation → SRS (Clarified Requirements, REQ-NNN)
   ↓ [Gate 1: Adversary — SRS vs Intent]
-Spec / SDD: Constitution + REQ-NNN → Verification Property
+Spec / SDD: Constitution + Behavioural Contract → Verification Property
   ↓ [Gate 2: Adversary — Spec vs SRS]
 Work Item → Test Case
   ↓ [Gate 3: Adversary — Tests vs Spec]
@@ -382,9 +385,9 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 
 8. **External Enforcement over Persuasion:** Phase gates must be enforced by deterministic, non-AI scripts wherever possible — exit-code CI checks, pre-commit hooks, test runners — not by asking the Builder or Adversary to self-certify. AI confirmation of AI output is not a gate; a process that exits `1` on failure is. Prompts and instructions constrain agent behaviour at the soft level; tooling enforces it at the hard level. Where possible, validation at each phase gate should be zero-token: deterministic scripts, not LLM review.[^codeleash]
 
-9. **Derivation Fidelity:** Every artifact derived from another artifact has a dedicated gate review — an adversarial check of how faithfully and completely the derived artifact captures its source. The gate chain: Intent → SRS (**Gate 1**, Phase 1 Step 1b), SRS → Spec (**Gate 2**, Phase 2 Step 2c), Spec → Tests (**Gate 3**, Phase 3), Spec + Tests → Implementation (**Gate 4**, Phase 4), Spec invariants → Formal Proofs (**Gate 5**, Phase 6). At every gate, the Adversary receives only the source and derived artifacts — no deliberation records, no ADR content, no prior review history. The Adversary's independence at every gate is its defining property. This principle extends the pattern explicitly to the Intent→SRS transition (Gate 1) — the gate most commonly skipped because it precedes the first design decision.
+9. **Derivation Fidelity:** Every artifact derived from another artifact has a dedicated gate review — an adversarial check of how faithfully and completely the derived artifact captures its source. The gate chain: Intent → SRS (**Gate 1**, Phase 1 Step 1b), SRS → Spec (**Gate 2**, Phase 2 Step 2c), Spec → Tests (**Gate 3**, Phase 4 Pass 2), Spec + Tests → Implementation (**Gate 4**, Phase 4 Pass 1), Spec invariants → Formal Proofs (**Gate 5**, Phase 6). At every gate, the Adversary receives only the source and derived artifacts — no deliberation records, no ADR content, no prior review history. The Adversary's independence at every gate is its defining property. This principle extends the pattern explicitly to the Intent→SRS transition (Gate 1) — the gate most commonly skipped because it precedes the first design decision.
 
-10. **Four-Dimensional Convergence:** The system isn't done until specs, tests, implementation, *and* formal proofs have all independently survived adversarial review.
+10. **Full-Chain Convergence:** The system isn't done until requirements, specs, tests, implementation, *and* formal proofs have all independently survived adversarial review.
 
 11. **Evidence Before Assertions:** No actor may claim a phase artifact is complete, correct, or passing without fresh verification evidence. "Tests pass" requires a test runner output, not a recollection. "Implementation is complete" requires a line-by-line spec checklist, not an impression. "The Adversary found no issues" requires a recorded Adversary pass committed to the repository, not a Builder summary. Verification that was not freshly performed is not verification — it is memory, and memory degrades. This applies to every role and every phase: the Builder who submits without running the tests; the Adversary who declares convergence without checking every item; the Architect who signs off on a spec they haven't re-read against the requirements. The structural implementation is Principle 8 (External Enforcement): wherever possible, evidence generation is automated and the output is committed alongside the artifact it verifies. Where automation is unavailable, the evidence requirement is explicit — cite the run, attach the output, commit the record.
 
@@ -412,7 +415,7 @@ When work is distributed across multiple actors — whether a team of developers
 
 **Bounded actor context.** Each actor in a parallel stream receives only the artifacts relevant to their assigned work item: the spec section for their module, the relevant tests, and the interface contracts for any dependencies they consume. They do not receive the full project context, the outputs or current state of sibling streams, or reasoning behind decisions made outside their scope. For AI actors, this is a context window constraint; for human actors, it is a well-scoped work item. The principle is the same: an actor with more context than their task requires will make decisions outside their assigned scope, introducing implicit coupling that the spec did not authorise and the Tracker cannot track. This extends Entropy Resistance (Core Principle 7) from the Adversary to every parallel actor.
 
-**Integration gates.** When parallel streams rejoin, an adversarial review of the combined output against the combined spec is required before the integration is accepted. This is Gate 3 (Implementation vs. Spec + Tests) applied at the join node of the work DAG. Component-level gate passes are necessary but not sufficient: they verify that each component correctly implements its spec slice; they do not verify that the components compose correctly into the system the full spec describes. Derivation Fidelity (Core Principle 9) holds for DAG topologies — every node where artifacts are combined requires its own gate review.
+**Integration gates.** When parallel streams rejoin, an adversarial review of the combined output against the combined spec is required before the integration is accepted. This is Gate 4 (Implementation vs. Spec + Tests) applied at the join node of the work DAG. Component-level gate passes are necessary but not sufficient: they verify that each component correctly implements its spec slice; they do not verify that the components compose correctly into the system the full spec describes. Derivation Fidelity (Core Principle 9) holds for DAG topologies — every node where artifacts are combined requires its own gate review.
 
 **Hosted AI and Spec Confidentiality.** VSDD is designed as an AI-orchestrated workflow — but the early VSDD artifacts (the SRS, Constitution, Spec, and Verification Architecture) are typically the most information-dense documents in any project. They encode business logic, architectural constraints, quality goals, edge cases, and security posture in structured, machine-readable form. Pasting them into a hosted AI service externalises that structure in ways that may not be intended, and the pattern compounds: workflow logic, requirement categories, and architectural decisions can reveal sensitive methodology even when framed as a coding request.[^dekens]
 
@@ -452,8 +455,6 @@ For rapid prototyping or throwaway scripts, use the parts that make sense — TD
 
 ### References
 
-[^5cs]: Daw, A. (2026). *Five Categories of Human Excellence in the Age of AI*. https://adamdaw.com/writing/five-categories-of-human-excellence/
-
 [^merrill]: Merrill, W., & Sabharwal, A. (2023). The Expressive Power of Transformers with Chain of Thought. *NeurIPS 2023*. arXiv:2310.07923. https://arxiv.org/abs/2310.07923
 
 [^self-refine]: Madaan, A., Tandon, N., Gupta, P., et al. (2023). Self-Refine: Iterative Refinement with Self-Feedback. *NeurIPS 2023*. arXiv:2303.17651. https://arxiv.org/abs/2303.17651
@@ -465,8 +466,6 @@ For rapid prototyping or throwaway scripts, use the parts that make sense — TD
 [^constitutional]: Bai, Y., Kadavath, S., Kundu, S., et al. (2022). Constitutional AI: Harmlessness from AI Feedback. arXiv:2212.08073. https://arxiv.org/abs/2212.08073
 
 [^over-editing]: Nrehiew (2026). Coding Models Are Doing Too Much. https://nrehiew.github.io/blog/minimal_editing/
-
-[^snell]: Snell, C., Klein, D., & Zhong, V. (2022). Learning by Distilling Context. arXiv:2209.15189. https://arxiv.org/abs/2209.15189
 
 [^ears]: Mavin, A. (2009). EARS (Easy Approach to Requirements Syntax). IEEE International Requirements Engineering Conference. Originally developed at Rolls-Royce aerospace; eliminates modal ambiguity in requirement statements.
 
