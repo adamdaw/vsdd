@@ -115,45 +115,77 @@ Different decomposition strategies carry different risk profiles when spec chang
 
 ### **III. The VSDD Pipeline**
 
-#### **Phase 1 — Spec Crystallization**
+#### **Phase 1 — Requirements Refinement**
 
-*Nothing gets built until the contract is airtight — and the architecture is verification-ready by design.*
+*Before the system is designed, the problem is made legible. Requirements are refined into an approved baseline — the SRS — and nothing is designed against requirements that have not survived their own gate.*
 
-**Prerequisite: the Constitution.** Before any feature work begins, the Architect establishes a project-level **Constitution** — the standing governing principles, architectural rules, and quality goals that all per-feature Specs must honour. The Constitution is a living document owned by the Architect; it does not change per feature. If a feature Spec would require violating the Constitution, the Architect must consciously amend the Constitution first rather than allowing silent exceptions.[^speckit]
-
-**Dependency Hygiene Policy.** The Constitution SHOULD establish a project-wide dependency hygiene policy covering all features. Minimum viable content: (1) a *justification requirement* — any new dependency must document what it provides that existing dependencies or the standard library cannot; (2) a *pinning strategy* — direct dependencies pinned via lock file; no floating version ranges in production artifacts; (3) a *review checklist* that the Adversary applies on every PR introducing a new dependency (see Phase 3, item 7). For projects on a security-critical path, the policy MAY extend to OpenSSF Scorecard requirements or equivalent maintenance and provenance criteria.[^openssf]
-
-The human developer describes the feature intent. Before the Builder produces a spec, the Architect conducts a deliberation over that intent.
+This is the requirements-refinement front-end: the disciplined analogue of a brainstorming pass.[^superpowers] It precedes all technical design. Its product is the **Software Requirements Specification (SRS)** — the business-facing statement of *what* the system must do and *why*, for stakeholders, Product, and QA. The *how* — architecture, interfaces, verification strategy — is a separate, later pass (Phase 2, the SDD). Keeping them apart is deliberate: requirements work must not stall on implementation decisions, and the build must not quietly redefine the requirement.
 
 **Step 1 — Deliberation**
 
-A Socratic dialog agent — or a structured deliberation session — asks questions one at a time: clarifying ambiguous intent, surfacing implicit assumptions, exploring alternative framings, and probing "what happens if X is wrong?" for each major requirement. The deliberation produces two outputs, and the boundary between them is critical:
+A Socratic dialog agent — or a structured deliberation session — asks questions one at a time: clarifying ambiguous intent, surfacing implicit assumptions, identifying stakeholders and their goals, exploring alternative framings, and probing "what happens if X is wrong?" for each major requirement. Resolve nothing silently. The deliberation produces two outputs, and the boundary between them is critical:
 
-1. **Clarified Requirements.** Every implicit assumption, alternative interpretation, and intent clarification surfaced during deliberation is written explicitly into the requirements document. This enriched document — not the original requirements stub — is the input to Step 1a and to Gate 1 (Spec Fidelity Review). The Clarified Requirements are the Architect's intent made legible.
+1. **The SRS (Clarified Requirements).** Every implicit assumption, alternative interpretation, and intent clarification surfaced during deliberation is written explicitly into the requirements document. This enriched document — not the original requirements stub — is the input to Phase 2 and the artifact reviewed at Gate 1. The SRS is the Architect's intent made legible.
 
 2. **ADR entries.** Rejected alternatives, reasoning behind significant decisions, trade-offs consciously accepted. Committed to the repository (arc42 Section 9 / `Constitution.md` ADR section) as human-readable records for the Architect and future maintainers.
 
-**What the Adversary does NOT receive:** the deliberation record or ADR content. The Adversary at Gate 1 receives only the Clarified Requirements and the Spec — nothing more. This boundary is not a convenience; it is the mechanism that preserves the Adversary's independence. An Adversary that knows why a spec was written the way it was will probe against the specifier's reasoning rather than independently arriving at whether the conclusion is sound. The gap between what the specifier intended and what the Adversary independently finds *is* the value of the gate. Collapsing that gap by sharing the deliberation defeats the purpose.[^superpowers]
+**What the Adversary does NOT receive:** the deliberation record or ADR content. The Adversary at every gate receives only the source artifact and the artifact derived from it — at Gate 1, the original feature request and the SRS; nothing more. This boundary is not a convenience; it is the mechanism that preserves the Adversary's independence. An Adversary that knows *why* a requirement was written the way it was will probe against the specifier's reasoning rather than independently arriving at whether the conclusion is sound. The gap between what the specifier intended and what the Adversary independently finds *is* the value of the gate. Collapsing that gap by sharing the deliberation defeats the purpose.[^superpowers]
 
-The Builder then produces a **formal specification document** for each unit of work. Critically, this phase doesn't just define *what* the software does — it defines *what must be provable about it* and structures the architecture accordingly.
+**Step 1a — Authoring the SRS (tiered to the unit of work)**
 
-**Step 1a: Behavioural Specification**
+The weight of the SRS is keyed to the decomposition unit:
 
-The Builder produces the functional contract:
+- **Epic-sized work** — a requirement that will fan out into multiple independently-deployable work items — gets the **full SRS**: a structured requirements document along the lines of ISO/IEC/IEEE 29148.[^iso29148] Its sections: Purpose and Scope; Stakeholders (role, goals, priority); Business Requirements (each a goal with a measurable success criterion, MoSCoW-prioritised); Functional Requirements (user stories — *As a [role], I want [capability], so that [benefit]*); Non-Functional Requirements (ISO 25010 quality categories, each with a measurable criterion); Constraints; Assumptions and Dependencies (with impact-if-wrong); Acceptance Criteria (Gherkin, per Must requirement); and a Requirements Traceability Matrix. The epic-level SRS is the artifact that *feeds the decomposition* into work items.
 
-- **Behavioural Contract:** What the module/function/endpoint *must* do, expressed as preconditions, postconditions, and invariants. Requirements are written in **EARS format** (Easy Approach to Requirements Syntax)[^ears] — five patterns that eliminate ambiguity by mandating SHALL or MUST and forbidding *should*, *may*, *could*, *might*:
+- **Work-item-sized work** — a single, independently-deployable unit — gets the **light SRS**: EARS-format requirements plus Gherkin acceptance criteria, grouped by how each is confirmed (automatically / visible in the environment / by a person). A work item born from an epic inherits the relevant slice of the epic SRS and adds only its specifics.
+
+Requirements are written in **EARS format** (Easy Approach to Requirements Syntax)[^ears] — five fill-in-the-blank patterns that eliminate ambiguity by mandating SHALL/MUST and forbidding *should*, *may*, *could*, *might*:
   - *Ubiquitous:* `The system SHALL <action>.`
   - *Event-Driven:* `WHEN <trigger>, the system SHALL <action>.`
   - *State-Driven:* `WHILE <state>, the system SHALL <action>.`
   - *Optional Feature:* `WHERE <feature is included>, the system SHALL <action>.`
   - *Unwanted Behaviour:* `IF <condition>, THEN the system SHALL <response>.`
-  Each requirement receives a unique identifier (REQ-NNN) that traces through the full contract chain: REQ-NNN → test case → implementation → adversarial review → formal proof.
+Acceptance criteria are written as **Gherkin** scenarios (*Given / When / Then*), one per meaningful path. Each requirement receives a unique identifier (REQ-NNN) that traces through the full chain: REQ-NNN → spec contract → test case → implementation → adversarial review → formal proof.
+
+**Describe WHAT, never HOW.** A requirement states observable behaviour — inputs, outputs, system responses — that a tester could verify *without reading the code*. If you cannot verify it without opening the implementation, it is HOW, not WHAT: class hierarchies, internal patterns, framework names, and coverage thresholds are design detail and belong to the SDD (Phase 2), not the SRS. This boundary is the load-bearing seam between Phase 1 and Phase 2.
+
+**Decomposition bridge.** When the SRS describes an epic, it is cut into atomic, independently-deployable work items before Phase 2 begins — each work item carrying its own light SRS (its slice of the epic SRS plus specifics), its dependencies named, and its criticality tagged. Decomposition is dependency-aware (the Tracker's role; see §II). A "work item" that cannot name its single responsibility or cannot deploy without a sibling is not yet atomic — split it before it enters Phase 2.
+
+**Step 1b — SRS Review Gate (Gate 1 — SRS Fidelity Review)**
+
+The SRS is reviewed by *both* the human and the Adversary before any technical spec is written. The Adversary receives the original feature request and the SRS — nothing else: no deliberation record, no ADR, no architectural reasoning. This is Gate 1 in the Derivation Fidelity chain (Core Principle 9), and the gate most commonly skipped because it precedes the first design decision. The Adversary checks that every requirement is:
+
+- **Unambiguous** — EARS-shaped, no *should/may/could*; it cannot be read two ways.
+- **Testable without code** — verifiable by observing behaviour, not by reading the implementation.
+- **Complete** — no missing stakeholder, no unhandled edge case, no NFR left implicit (null / empty / maximum / concurrent behaviour stated where it matters).
+- **Non-contradictory** — no requirement conflicts with another or with the Constitution's quality goals.
+- **WHAT, not HOW** — no design or implementation detail has leaked into the requirement.
+
+The SRS is iterated until the Adversary can find no legitimate holes. **No technical spec authorship (Phase 2) begins until Gate 1 is cleared and the Architect signs off** — the approve-before-design gate. Clearing a finding means resolved-and-applied or explicitly accepted by the Architect, not merely acknowledged. Enforce structurally: a pre-Phase-2 hook that checks for a committed Gate 1 pass record (Core Principle 8).
+
+---
+
+#### **Phase 2 — Spec Crystallization**
+
+*Nothing gets built until the contract is airtight — and the architecture is verification-ready by design.*
+
+**Prerequisite: the Constitution.** Before any feature work begins, the Architect establishes a project-level **Constitution** — the standing governing principles, architectural rules, and quality goals that all per-feature Specs must honour. The Constitution is a living document owned by the Architect; it does not change per feature. If a feature Spec would require violating the Constitution, the Architect must consciously amend the Constitution first rather than allowing silent exceptions.[^speckit]
+
+**Dependency Hygiene Policy.** The Constitution SHOULD establish a project-wide dependency hygiene policy covering all features. Minimum viable content: (1) a *justification requirement* — any new dependency must document what it provides that existing dependencies or the standard library cannot; (2) a *pinning strategy* — direct dependencies pinned via lock file; no floating version ranges in production artifacts; (3) a *review checklist* that the Adversary applies on every PR introducing a new dependency (see Phase 4, item 7). For projects on a security-critical path, the policy MAY extend to OpenSSF Scorecard requirements or equivalent maintenance and provenance criteria.[^openssf]
+
+With an approved SRS in hand, the Builder produces a **formal specification document** — the **Software Design Document (SDD)** — for each unit of work. This phase encodes the SRS's requirements into a technical contract for developers, architects, and reviewers: it does not merely restate *what* the software does — it defines *how* it is built and *what must be provable about it*, and structures the architecture accordingly.
+
+**Step 2a: Behavioural Specification**
+
+The Builder encodes the SRS's requirements into the functional contract:
+
+- **Behavioural Contract:** What the module/function/endpoint *must* do, expressed as preconditions, postconditions, and invariants. Each EARS requirement from the SRS (REQ-NNN) is encoded here as a formal contract clause; the identifier carries through to the test case, implementation, adversarial review, and formal proof.
 - **Interface Definition:** Input types, output types, error types. No ambiguity. If it's an API, this is the OpenAPI/GraphQL schema. If it's a module, this is the type signature and doc contract.
 - **Edge Case Catalog:** Explicitly enumerated boundary conditions, degenerate inputs, and failure modes. The Builder is prompted to be *exhaustive* here — "What happens when the input is null? Empty? Maximum size? Negative? Unicode? Concurrent?" Each edge case receives a REQ-NNN identifier and traces to a dedicated test.
 - **Non-Functional Requirements:** Performance bounds, memory constraints, security considerations baked into the spec itself.
 - **Security Clauses (security-critical paths):** For any feature on a security-critical path (authentication, authorisation, financial calculation, data handling), the Behavioural Contract includes constitutional security clauses in CSDD format[^marri]: each clause has a SEC-NNN identifier, a CWE reference (e.g., CWE-89 SQL Injection), a MUST/SHOULD/MAY level, an implementation pattern, and an enforcement mechanism (static analysis rule, merge blocker). MUST-level violations reject the implementation and require a rewrite. This layer is optional for non-security-critical features and mandatory for those that are. Empirical basis: constitutional security constraints reduce security defects by 73% compared to unconstrained AI generation with no velocity degradation.[^marri]
 
-**Step 1b: Verification Architecture**
+**Step 2b: Verification Architecture**
 
 Before any implementation design is finalised, the Builder produces a **Verification Strategy** that answers: *"What properties of this system must be mathematically provable, and what architectural constraints does that impose?"*
 
@@ -164,11 +196,11 @@ This includes:
 - **Verification Tooling Selection:** Based on the language and the properties to be proven, the Builder selects the appropriate formal verification stack (Kani for Rust, CBMC for C/C++, Dafny, TLA+ for distributed systems, etc.) and identifies any constraints these tools impose on code structure. This happens *now*, not after the code is written, because tool constraints are architectural constraints. Where tooling selection is uncertain, a **Research artifact** is produced first — a spike that validates the chosen tool against a representative property before the full verification architecture commits to it. The Research artifact records spike results, the tool decision, and reasons alternatives were rejected; it is committed to the repository alongside the Constitution and Spec.[^speckit]
 - **Property Specifications:** Where possible, the Builder drafts the actual formal property definitions (e.g., Kani proof harnesses, Dafny contracts, TLA+ invariants) alongside the behavioural spec. These aren't implementation — they're the formal expression of what the spec already says in natural language. They serve as a second, mathematically precise encoding of the requirements.
 
-**Why this must happen in Phase 1:** If the system is designed with side effects woven through the core logic, no amount of Phase 5 heroics will make it verifiable. A function that reads from a database, performs a calculation, and writes to a log in one block cannot be formally verified without mocking infrastructure that the verifier may not support. But a function that takes data in, returns a result, and lets the caller handle persistence — that's a function a model checker can reason about. This boundary must be drawn at the spec level because it fundamentally shapes the module decomposition, the dependency graph, and the testing strategy that follows.
+**Why this must happen in Phase 2:** If the system is designed with side effects woven through the core logic, no amount of Phase 6 heroics will make it verifiable. A function that reads from a database, performs a calculation, and writes to a log in one block cannot be formally verified without mocking infrastructure that the verifier may not support. But a function that takes data in, returns a result, and lets the caller handle persistence — that's a function a model checker can reason about. This boundary must be drawn at the spec level because it fundamentally shapes the module decomposition, the dependency graph, and the testing strategy that follows.
 
-**Step 1c: Spec Review Gate (Gate 1 — Spec Fidelity Review)**
+**Step 2c: Spec Review Gate (Gate 2 — Spec Fidelity Review)**
 
-The complete spec — behavioural contracts *and* verification architecture — is reviewed by *both* the human and the Adversary before any tests are written. The Adversary receives: the Clarified Requirements (output of Step 1 Deliberation) and the Spec. It receives nothing else — no deliberation record, no ADR, no reasoning behind spec decisions. This is Gate 1 in the Derivation Fidelity chain (Core Principle 9).
+The complete spec — behavioural contracts *and* verification architecture — is reviewed by *both* the human and the Adversary before any tests are written. The Adversary receives the approved SRS (Phase 1) and the Spec. It receives nothing else — no deliberation record, no ADR, no reasoning behind spec decisions. This is Gate 2 in the Derivation Fidelity chain (Core Principle 9).
 
 The Adversary tears into the spec looking for:
 
@@ -180,19 +212,19 @@ The Adversary tears into the spec looking for:
 - **Purity boundary violations** — logic marked as "pure core" that actually depends on external state
 - **Verification tool mismatches** — properties the selected tooling can't actually prove
 
-The spec is iterated until the Adversary can't find legitimate holes in either the behavioural contract or the verification strategy. This gate should be enforced structurally: no test suite generation begins until a recorded Adversary pass on the spec is committed to the repository. A pre-Phase-2 hook that checks for this record is the structural implementation (Core Principle 8).
+The spec is iterated until the Adversary can't find legitimate holes in either the behavioural contract or the verification strategy. This gate should be enforced structurally: no test suite generation begins until a recorded Adversary pass on the spec is committed to the repository. A pre-Phase-3 hook that checks for this record is the structural implementation (Core Principle 8).
 
 **Tracker Integration:** Each spec maps to a work item. Sub-items are generated for each behavioural contract item, edge case, non-functional requirement, *and* each formally provable property. The provable properties get their own work item chain so their status is tracked independently from test coverage.
 
 ---
 
-#### **Phase 2 — Test-First Implementation (The TDD Core)**
+#### **Phase 3 — Test-First Implementation (The TDD Core)**
 
 *Red → Green → Refactor, enforced by AI.*
 
 With an airtight spec in hand, the Builder now writes tests — and *only* tests. No implementation code yet.
 
-**Step 2a: Test Suite Generation**
+**Step 3a: Test Suite Generation**
 
 The Builder translates the spec directly into executable tests:
 
@@ -205,7 +237,7 @@ The Builder translates the spec directly into executable tests:
 
 **Regression Test Verification (Red–Green–Revert cycle):** For bug fixes, the Red Gate has a stricter form. After writing the regression test: (1) confirm it *fails* on the broken code; (2) apply the fix and confirm the test *passes*; (3) *revert* the fix and confirm the test *fails* again; (4) restore the fix. A regression test that passes before the fix is applied was never testing the right thing — it cannot catch a regression. Only the three-step Red → Green → Revert → Red sequence proves the test is genuinely tied to the defect it is meant to guard against.
 
-**Step 2b: Minimal Implementation**
+**Step 3b: Minimal Implementation**
 
 The Builder writes the *minimum* code necessary to make each test pass, one at a time. This is classic TDD discipline:
 
@@ -216,19 +248,19 @@ The Builder writes the *minimum* code necessary to make each test pass, one at a
 
 **TDD Compliance Log:** The Builder records, for each requirement, the mapping: failing test → minimal implementation → test pass. This log is committed to the repository alongside the code. It is not documentation after the fact — it is the audit trail that the Adversary checks when verifying that TDD discipline was followed in practice, not merely claimed.[^rlm]
 
-**Step 2c: Refactor**
+**Step 3c: Refactor**
 
 After all tests are green, the Builder refactors for clarity, performance, and adherence to the non-functional requirements in the spec. The test suite acts as the safety net — if refactoring breaks something, the tests catch it immediately.
 
 **Human Checkpoint:** The developer reviews the test suite and implementation for alignment with the "spirit" of the spec. AI can miss intent even when it nails the letter of the contract.
 
-**Step 2d: Builder Self-Review**
+**Step 3d: Builder Self-Review**
 
 Before handing off to the Adversary, the Builder performs a self-critique pass against the spec. This is not a replacement for adversarial review — it is a pre-flight check that surfaces issues the Builder can identify from its own position. Prompt: *"Review your implementation against the spec. Identify anything incomplete, inconsistent with the spec, or likely to fail adversarial scrutiny. Fix what you can; escalate what cannot be resolved without Architect input."* Self-review with explicit prompting yields measurable improvement before external review; the Adversary then focuses on what self-review cannot reach.[^self-refine]
 
 ---
 
-#### **Phase 3 — Adversarial Refinement**
+#### **Phase 4 — Adversarial Refinement**
 
 *The code survived testing. Now it faces the Adversary.*
 
@@ -243,7 +275,7 @@ The Adversary reads the implementation directly. It does *not* take the Builder'
 1. **Spec Fidelity:** Does the implementation actually satisfy the spec, or did the tests inadvertently encode a misunderstanding? The Adversary treats the spec as a constitution: the implementation must satisfy it fully and explicitly, not approximately. There is no partial credit for "mostly implemented" or "intended to satisfy" — either the requirement is met, demonstrably, or it is not.[^constitutional]
 2. **Spec Gaps Revealed by Implementation:** Sometimes writing the code reveals that the spec was incomplete. The Adversary looks for implemented behaviour that isn't covered by the spec — and for spec requirements that have no corresponding implementation the Builder failed to mention.
 
-Pass 1 findings require a return to Phase 1 or Phase 2 before Pass 2 is run.
+Pass 1 findings require a return to Phase 2 or Phase 3 before Pass 2 is run.
 
 **Pass 2 — Code Quality** *(only after Pass 1 passes)*
 
@@ -261,36 +293,37 @@ Pass 1 findings require a return to Phase 1 or Phase 2 before Pass 2 is run.
 
 ---
 
-#### **Phase 4 — Feedback Integration Loop**
+#### **Phase 5 — Feedback Integration Loop**
 
 The Adversary's critique feeds back through the entire pipeline:
 
-- **Spec-level flaws** → Return to Phase 1. Update the spec, re-review.
-- **Test-level flaws** → Return to Phase 2a. Fix or add tests, verify they fail against the current implementation (or a deliberately broken version), then fix implementation if needed.
-- **Implementation-level flaws** → Return to Phase 2c. Refactor, ensure all tests still pass.
+- **Requirements-level flaws** → Return to Phase 1. Refine the SRS, re-review at Gate 1.
+- **Spec-level flaws** → Return to Phase 2. Update the spec, re-review.
+- **Test-level flaws** → Return to Phase 3a. Fix or add tests, verify they fail against the current implementation (or a deliberately broken version), then fix implementation if needed.
+- **Implementation-level flaws** → Return to Phase 3c. Refactor, ensure all tests still pass.
 - **New edge cases discovered** → Add to spec's Edge Case Catalog, write new failing tests, implement fixes.
 
-This loop continues until convergence (see Phase 6).
+This loop continues until convergence (see Phase 7).
 
 **Loop Termination Signal — Architectural Escalation:** If the loop cycles on the same spec requirement or component more than three times without resolution — each fix attempt spawning a new Adversary finding at the same location — the issue is architectural, not implementational. Three failed fix attempts without convergence is the signal to *stop fixing* and escalate to the Architect: the spec or architecture is wrong, not the implementation. The Architect then decides whether to revise the spec, revise the architecture, or consciously accept a known limitation. Attempting a fourth fix without this escalation is almost always slower than surfacing the architectural problem directly — and the fix is nearly always wrong.
 
 ---
 
-#### **Phase 5 — Formal Hardening (Executing the Verification Plan)**
+#### **Phase 6 — Formal Hardening (Executing the Verification Plan)**
 
-The verification architecture designed in Phase 1b is now *executed* against the battle-tested implementation. Because the codebase was architected from the start with a pure core and clear purity boundaries, formal verification tools can operate on it without heroic refactoring.
+The verification architecture designed in Phase 2b is now *executed* against the battle-tested implementation. Because the codebase was architected from the start with a pure core and clear purity boundaries, formal verification tools can operate on it without heroic refactoring.
 
-- **Proof Execution:** The property specifications drafted in Phase 1b (Kani harnesses, Dafny contracts, TLA+ invariants, etc.) are run against the implementation. Because the architecture was designed for verifiability, these proofs should engage cleanly with the pure core. Failures here indicate either implementation bugs or spec properties that need refinement — both feed back through Phase 4.
+- **Proof Execution:** The property specifications drafted in Phase 2b (Kani harnesses, Dafny contracts, TLA+ invariants, etc.) are run against the implementation. Because the architecture was designed for verifiability, these proofs should engage cleanly with the pure core. Failures here indicate either implementation bugs or spec properties that need refinement — both feed back through Phase 4.
 - **Fuzz Testing:** Structured fuzzing (AFL++, libFuzzer, cargo-fuzz) is layered on top of property-based tests to find inputs that no human or AI anticipated. The deterministic core is an ideal fuzz target because it has no environmental dependencies to mock.
 - **Security Hardening:** Suites like **Wycheproof** (cryptographic edge cases) and **Semgrep** (static analysis) are run as CI/CD gates.
 - **Mutation Testing:** Tools like **mutmut** or **Stryker** mutate the code to verify the test suite actually catches real bugs. If a mutation survives, the test suite has a gap.
-- **Purity Boundary Audit:** A final check that the purity boundaries defined in Phase 1b have been respected throughout implementation. Any side effects that crept into the pure core during development are flagged and refactored out.
+- **Purity Boundary Audit:** A final check that the purity boundaries defined in Phase 2b have been respected throughout implementation. Any side effects that crept into the pure core during development are flagged and refactored out.
 
-All formal verification and fuzzing results feed back into Phase 4 if issues are found. Phase 5 checks are CI gates — formal proofs, fuzz results, mutation test kill rates, and purity boundary audit outcomes must all pass as structural prerequisites before Phase 6 convergence can be declared. These are hook-enforced, not self-certified (Core Principle 8).
+All formal verification and fuzzing results feed back into Phase 5 if issues are found. Phase 6 checks are CI gates — formal proofs, fuzz results, mutation test kill rates, and purity boundary audit outcomes must all pass as structural prerequisites before Phase 7 convergence can be declared. These are hook-enforced, not self-certified (Core Principle 8).
 
 ---
 
-#### **Phase 6 — Convergence (The Exit Signal)**
+#### **Phase 7 — Convergence (The Exit Signal)**
 
 VSDD inherits VDD's **hallucination-based termination**, extended across all three dimensions:
 
@@ -299,7 +332,7 @@ VSDD inherits VDD's **hallucination-based termination**, extended across all thr
 | **Spec** | The Adversary's spec critiques are nitpicks about wording, not about missing behaviour, ambiguity, or verification gaps. |
 | **Tests** | The Adversary can't identify a meaningful untested scenario. Mutation testing confirms high kill rate. |
 | **Implementation** | The Adversary is forced to invent problems that don't exist in the code. |
-| **Verification** | All properties from the Phase 1b catalog pass formal proof. Fuzzers find nothing. Purity boundaries are intact. |
+| **Verification** | All properties from the Phase 2b catalog pass formal proof. Fuzzers find nothing. Purity boundaries are intact. |
 | **Edit minimality** | No unrequested structural changes — no nesting, branching, or control flow introduced beyond what each fix required. Diff scope matches work item scope. |
 
 **Maximum Viable Refinement** is reached when all four dimensions have converged. The software is considered **Zero-Slop** — every line of code traces to a spec requirement, is covered by a test, has survived adversarial scrutiny, and the critical path is formally proven.
@@ -313,18 +346,19 @@ VSDD inherits VDD's **hallucination-based termination**, extended across all thr
 One of VSDD's defining properties is **full traceability**. Every artifact links back:
 
 ```
-Intent → Deliberation → Clarified Requirements
-  ↓ [Gate 1: Adversary — Spec vs Requirements]
-Constitution + REQ-NNN → Verification Property
-  ↓ [Gate 2: Adversary — Tests vs Spec]
+Intent → Deliberation → SRS (Clarified Requirements)
+  ↓ [Gate 1: Adversary — SRS vs Intent]
+Spec / SDD: Constitution + REQ-NNN → Verification Property
+  ↓ [Gate 2: Adversary — Spec vs SRS]
 Work Item → Test Case
-  ↓ [Gate 3: Adversary — Implementation vs Spec + Tests]
+  ↓ [Gate 3: Adversary — Tests vs Spec]
 Implementation
-  ↓ [Gate 4: Adversary — Proofs vs Spec invariants]
+  ↓ [Gate 4: Adversary — Implementation vs Spec + Tests]
 Formal Proof
+  ↓ [Gate 5: Adversary — Proofs vs Spec invariants]
 ```
 
-At any point, you can ask: *"Why does this line of code exist?"* and trace it all the way back to a specific spec requirement, through the verification property it satisfies, the test that demanded it, the adversarial review that hardened it, and the formal proof that guarantees it. Equally, you can ask *"Why is this module structured as a pure function?"* and trace that decision back to the Purity Boundary Map in Phase 1b.
+At any point, you can ask: *"Why does this line of code exist?"* and trace it all the way back to a specific spec requirement, through the verification property it satisfies, the test that demanded it, the adversarial review that hardened it, and the formal proof that guarantees it. Equally, you can ask *"Why is this module structured as a pure function?"* and trace that decision back to the Purity Boundary Map in Phase 2b.
 
 **Repo as Source of Truth:** Phase artifacts — the spec, the verification strategy, ADRs, the Adversary's convergence declarations — live in the repository as versioned documents, not in conversation history or prompt memory. Prompts and conversational turns are lightweight commands; the authoritative state is always what is committed. This means every artifact can be read, diffed, and audited independently of any AI session, and a new session can be fully oriented by reading the repo alone.[^rlm]
 
@@ -334,7 +368,7 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 
 1. **Spec Supremacy:** Two spec-level artifacts govern the pipeline. The **Constitution** is the project-level governing document — standing principles, architectural rules, and quality goals that apply across all features. The **Spec** is the per-feature behavioural contract — preconditions, postconditions, invariants, and edge cases for the current unit of work. Tests serve the Spec. The Spec serves the Constitution. Code serves the tests. Nothing exists without a reason traced to the Spec, and no Spec requirement may contradict the Constitution.[^speckit]
 
-2. **Verification-First Architecture:** The need for formal provability shapes the design, not the other way around. Pure core, effectful shell. If you can't verify it, you architected it wrong — and you find that out in Phase 1, not Phase 5.
+2. **Verification-First Architecture:** The need for formal provability shapes the design, not the other way around. Pure core, effectful shell. If you can't verify it, you architected it wrong — and you find that out in Phase 2, not Phase 6.
 
 3. **Red Before Green:** No implementation code is written until a failing test demands it. AI models are explicitly constrained to follow TDD discipline — no "let me just write the whole thing and add tests after."
 
@@ -348,7 +382,7 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 
 8. **External Enforcement over Persuasion:** Phase gates must be enforced by deterministic, non-AI scripts wherever possible — exit-code CI checks, pre-commit hooks, test runners — not by asking the Builder or Adversary to self-certify. AI confirmation of AI output is not a gate; a process that exits `1` on failure is. Prompts and instructions constrain agent behaviour at the soft level; tooling enforces it at the hard level. Where possible, validation at each phase gate should be zero-token: deterministic scripts, not LLM review.[^codeleash]
 
-9. **Derivation Fidelity:** Every artifact derived from another artifact has a dedicated gate review — an adversarial check of how faithfully and completely the derived artifact captures its source. The gate chain: Clarified Requirements → Spec (**Gate 1**, Step 1c), Spec → Tests (**Gate 2**, Phase 3 item 2), Spec + Tests → Implementation (**Gate 3**, Phase 3), Spec invariants → Formal Proofs (**Gate 4**, Phase 5). At every gate, the Adversary receives only the source and derived artifacts — no deliberation records, no ADR content, no prior review history. The Adversary's independence at every gate is its defining property. This principle names the pattern already present in Steps 1c, Phase 3, and Phase 5, and extends it explicitly to the Requirements→Spec transition (Gate 1) — the gate most commonly skipped because it precedes the first line of code.
+9. **Derivation Fidelity:** Every artifact derived from another artifact has a dedicated gate review — an adversarial check of how faithfully and completely the derived artifact captures its source. The gate chain: Intent → SRS (**Gate 1**, Phase 1 Step 1b), SRS → Spec (**Gate 2**, Phase 2 Step 2c), Spec → Tests (**Gate 3**, Phase 3), Spec + Tests → Implementation (**Gate 4**, Phase 4), Spec invariants → Formal Proofs (**Gate 5**, Phase 6). At every gate, the Adversary receives only the source and derived artifacts — no deliberation records, no ADR content, no prior review history. The Adversary's independence at every gate is its defining property. This principle extends the pattern explicitly to the Intent→SRS transition (Gate 1) — the gate most commonly skipped because it precedes the first design decision.
 
 10. **Four-Dimensional Convergence:** The system isn't done until specs, tests, implementation, *and* formal proofs have all independently survived adversarial review.
 
@@ -380,12 +414,12 @@ When work is distributed across multiple actors — whether a team of developers
 
 **Integration gates.** When parallel streams rejoin, an adversarial review of the combined output against the combined spec is required before the integration is accepted. This is Gate 3 (Implementation vs. Spec + Tests) applied at the join node of the work DAG. Component-level gate passes are necessary but not sufficient: they verify that each component correctly implements its spec slice; they do not verify that the components compose correctly into the system the full spec describes. Derivation Fidelity (Core Principle 9) holds for DAG topologies — every node where artifacts are combined requires its own gate review.
 
-**Hosted AI and Spec Confidentiality.** VSDD is designed as an AI-orchestrated workflow — but Phase 1 artifacts (Constitution, Spec, Verification Architecture) are typically the most information-dense documents in any project. They encode business logic, architectural constraints, quality goals, edge cases, and security posture in structured, machine-readable form. Pasting them into a hosted AI service externalises that structure in ways that may not be intended, and the pattern compounds: workflow logic, requirement categories, and architectural decisions can reveal sensitive methodology even when framed as a coding request.[^dekens]
+**Hosted AI and Spec Confidentiality.** VSDD is designed as an AI-orchestrated workflow — but the early VSDD artifacts (the SRS, Constitution, Spec, and Verification Architecture) are typically the most information-dense documents in any project. They encode business logic, architectural constraints, quality goals, edge cases, and security posture in structured, machine-readable form. Pasting them into a hosted AI service externalises that structure in ways that may not be intended, and the pattern compounds: workflow logic, requirement categories, and architectural decisions can reveal sensitive methodology even when framed as a coding request.[^dekens]
 
 This is an obvious caution — but it deserves explicit treatment precisely because VSDD is AI-first and the temptation to route everything through a capable hosted model is high. The mitigation is structural, not motivational:
 
-- **Local model for Phase 1.** Run Spec Crystallization against a local model (Ollama, LM Studio, or equivalent) rather than a hosted service. The Builder produces the Constitution, Spec, and Verification Architecture locally; these become committed, versioned repo artifacts. Downstream phases — where the sensitive spec is already in the repo rather than in a prompt — can use hosted models without additional exposure.
-- **Manual Spec Crystallization.** Author the spec as a human-first document; use AI only for the Phase 1c adversarial review, not the generative steps 1a–1b. Slower, but the spec content never leaves the local environment in prompt form. For practitioners using a structured documentation pipeline (e.g., Daedalus[^daedalus]) that can run without AI enrichment, the non-AI execution path is the privacy-safe route: run the pipeline, commit the artifacts, then invoke AI only at the review gate. For teams with strong domain expertise, this is often the right call regardless of confidentiality — the spec should reflect the Architect's understanding, not the Builder's inference from a requirements paragraph.
+- **Local model for the upstream phases.** Run requirements refinement and spec crystallization (Phases 1–2) against a local model (Ollama, LM Studio, or equivalent) rather than a hosted service. The Builder produces the SRS, Constitution, Spec, and Verification Architecture locally; these become committed, versioned repo artifacts. Downstream phases — where the sensitive spec is already in the repo rather than in a prompt — can use hosted models without additional exposure.
+- **Manual Spec Crystallization.** Author the spec as a human-first document; use AI only for the Phase 2c adversarial review, not the generative steps 2a–2b. Slower, but the spec content never leaves the local environment in prompt form. For practitioners using a structured documentation pipeline (e.g., Daedalus[^daedalus]) that can run without AI enrichment, the non-AI execution path is the privacy-safe route: run the pipeline, commit the artifacts, then invoke AI only at the review gate. For teams with strong domain expertise, this is often the right call regardless of confidentiality — the spec should reflect the Architect's understanding, not the Builder's inference from a requirements paragraph.
 - **Enterprise hosting with appropriate data handling agreements.** Where local models are insufficient for the task, a self-hosted or enterprise-tier deployment of the AI service with contractual data handling terms is the middle path.
 
 The underlying principle is Core Principle 8 applied to data: structure the workflow so sensitive content doesn't reach hosted services in prompt form in the first place, rather than trusting that the Builder will exercise discretion about what to include.
@@ -396,7 +430,7 @@ The underlying principle is Core Principle 8 applied to data: structure the work
 
 ### **VII. When to Use VSDD**
 
-**Ecosystem positioning:** On Piskala's three-level SDD rigor taxonomy[^piskala], VSDD sits at **L2+ (Spec-Anchored with formal hardening approaching L3)**. L2 (Spec-Anchored) means the spec is maintained through the full project lifecycle, every change requires an addendum, and full REQ→test→implementation→review traceability is enforced. VSDD adds Phase 5 formal hardening (Kani/TLA+) that pure L2 frameworks do not have, without going full L3 (Spec-as-Source, where code is generated directly from the spec and not manually edited).
+**Ecosystem positioning:** On Piskala's three-level SDD rigor taxonomy[^piskala], VSDD sits at **L2+ (Spec-Anchored with formal hardening approaching L3)**. L2 (Spec-Anchored) means the spec is maintained through the full project lifecycle, every change requires an addendum, and full REQ→test→implementation→review traceability is enforced. VSDD adds Phase 6 formal hardening (Kani/TLA+) that pure L2 frameworks do not have, without going full L3 (Spec-as-Source, where code is generated directly from the spec and not manually edited).
 
 **Calibration heuristic (Piskala):** Before choosing a rigor level, answer one question: *"How many times in the past year did someone ask about requirements-to-test traceability?"* Zero times — L1 (Spec-First) is sufficient. Once — move to L2 (VSDD). More than once, or if the project has a greater than 80% chance of being audited — L2 (VSDD) plus CSDD security clauses for the security-critical paths.[^piskala]
 
@@ -436,6 +470,8 @@ For rapid prototyping or throwaway scripts, use the parts that make sense — TD
 
 [^ears]: Mavin, A. (2009). EARS (Easy Approach to Requirements Syntax). IEEE International Requirements Engineering Conference. Originally developed at Rolls-Royce aerospace; eliminates modal ambiguity in requirement statements.
 
+[^iso29148]: ISO/IEC/IEEE 29148:2018. *Systems and software engineering — Life cycle processes — Requirements engineering.* The international standard defining the content and structure of a Software Requirements Specification (SRS): stakeholders, business and functional requirements, non-functional/quality requirements, constraints, and traceability.
+
 [^marri]: Marri, S. R. (2026). Constitutional Spec-Driven Development: Enforcing Security by Construction in AI-Assisted Code Generation. arXiv:2602.02584. https://arxiv.org/abs/2602.02584
 
 [^piskala]: Piskala, D. B. (2026). Spec-Driven Development: From Code to Contract in the Age of AI Coding Assistants. AIWare 2026. arXiv:2602.00180. https://arxiv.org/abs/2602.00180
@@ -454,4 +490,4 @@ For rapid prototyping or throwaway scripts, use the parts that make sense — TD
 
 [^daedalus]: Daw, A. (2026). Daedalus: Architecture documentation pipeline. https://github.com/adamdaw/daedalus
 
-[^superpowers]: Vincent, J. (obra) (2025). Superpowers: AI pair programming skills for Claude Code. https://github.com/obra/superpowers — brainstorming skill implements the Socratic deliberation interaction model referenced in Phase 1 Step 1.
+[^superpowers]: Vincent, J. (obra) (2025). Superpowers: AI pair programming skills for Claude Code. https://github.com/obra/superpowers — brainstorming skill implements the Socratic deliberation interaction model referenced in Phase 1 (Requirements Refinement).
