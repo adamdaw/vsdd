@@ -93,7 +93,7 @@ Tightly constrained by design. The closest analogue is the ability to surface no
 #### The Tracker *(AI agent or issue system)*
 
 **Constraints**
-Cannot invent requirements — every work item traces to a spec requirement. Cannot approve implementation; that is the Adversary's gate. Scope is issue decomposition and traceability only; no architectural judgment. Must maintain the full chain: Spec Requirement → Quality Scenario → Work Item → Test Case → Implementation. In team contexts, integrates with whatever issue tracking system the team uses — does not replace it.
+Cannot invent requirements — every work item traces to a spec requirement. Cannot approve implementation; that is the Adversary's gate. Scope is issue decomposition and traceability only; no architectural judgment. Must maintain the full chain: REQ-NNN (SRS) → Spec contract → Work Item → Test Case → Implementation. In team contexts, integrates with whatever issue tracking system the team uses — does not replace it.
 
 Must enforce issue assignment before code edits — no implementation work begins without an active, assigned work item. This is an External Enforcement concern: the mechanism should be structural (a hook that blocks edits without an active issue) rather than instructional. A prompt to "always create an issue first" is not enforcement; a pre-edit hook that exits `1` without an active issue is.[^chainlink]
 
@@ -185,7 +185,7 @@ The Builder encodes the SRS's requirements into the functional contract:
 - **Interface Definition:** Input types, output types, error types. No ambiguity. If it's an API, this is the OpenAPI/GraphQL schema. If it's a module, this is the type signature and doc contract.
 - **Edge Case Catalog:** Explicitly enumerated boundary conditions, degenerate inputs, and failure modes. The Builder is prompted to be *exhaustive* here — "What happens when the input is null? Empty? Maximum size? Negative? Unicode? Concurrent?" Edge cases already enumerated in the SRS carry their existing REQ-NNN; any edge case first surfaced here is written back into the SRS and minted a REQ-NNN there, not numbered independently in the SDD. Each traces to a dedicated test.
 - **Non-Functional Requirements:** Performance bounds, memory constraints, security considerations baked into the spec itself.
-- **Security Clauses (security-critical paths):** For any feature on a security-critical path (authentication, authorisation, financial calculation, data handling), the Behavioural Contract includes constitutional security clauses in CSDD format[^marri]: each clause has a SEC-NNN identifier, a CWE reference (e.g., CWE-89 SQL Injection), a MUST/SHOULD/MAY level, an implementation pattern, and an enforcement mechanism (static analysis rule, merge blocker). MUST-level violations reject the implementation and require a rewrite. This layer is optional for non-security-critical features and mandatory for those that are. Empirical basis: constitutional security constraints reduce security defects by 73% compared to unconstrained AI generation with no velocity degradation.[^marri]
+- **Security Clauses (security-critical paths):** For any feature on a security-critical path (authentication, authorisation, financial calculation, data handling), the Behavioural Contract includes constitutional security clauses in CSDD format[^marri]: each clause has a SEC-NNN identifier, a CWE reference (e.g., CWE-89 SQL Injection), a MUST/SHOULD/MAY level, an implementation pattern, and an enforcement mechanism (static analysis rule, merge blocker). MUST-level violations reject the implementation and require a rewrite. This layer is optional for non-security-critical features and mandatory for those that are. Empirical basis: in Marri's banking-microservices case study, constitutional security constraints reduced security defects by 73% versus unconstrained AI generation with no velocity degradation.[^marri] It is a single case study; treat the figure as indicative, not a guaranteed general result.
 
 **Step 2b: Verification Architecture**
 
@@ -318,10 +318,10 @@ The verification architecture designed in Phase 2b is now *executed* against the
 - **Proof Execution:** The property specifications drafted in Phase 2b (Kani harnesses, Dafny contracts, TLA+ invariants, etc.) are run against the implementation. Because the architecture was designed for verifiability, these proofs should engage cleanly with the pure core. Failures here indicate either implementation bugs or spec properties that need refinement — both feed back through Phase 5.
 - **Fuzz Testing:** Structured fuzzing (AFL++, libFuzzer, cargo-fuzz) is layered on top of property-based tests to find inputs that no human or AI anticipated. The deterministic core is an ideal fuzz target because it has no environmental dependencies to mock.
 - **Security Hardening:** Suites like **Wycheproof** (cryptographic edge cases) and **Semgrep** (static analysis) are run as CI/CD gates.
-- **Mutation Testing:** Tools like **mutmut** or **Stryker** mutate the code to verify the test suite actually catches real bugs. If a mutation survives, the test suite has a gap.
+- **Mutation Testing:** Tools like **mutmut** or **Stryker** mutate the code to verify the test suite actually catches real bugs. Every surviving mutant is a signal: it is either killed by a new or strengthened test, or committed with a written justification that it is an equivalent mutant no test can kill. No surviving mutant is left unreviewed.
 - **Purity Boundary Audit:** A final check that the purity boundaries defined in Phase 2b have been respected throughout implementation. Any side effects that crept into the pure core during development are flagged and refactored out.
 
-All formal verification and fuzzing results feed back into Phase 5 if issues are found. Phase 6 checks are CI gates — formal proofs, fuzz results, mutation test kill rates, and purity boundary audit outcomes must all pass as structural prerequisites before Phase 7 convergence can be declared. These are hook-enforced, not self-certified (Core Principle 8).
+All formal verification and fuzzing results feed back into Phase 5 if issues are found. Phase 6 checks are CI gates — formal proofs, fuzz results, every mutation survivor triaged (killed or justified as equivalent), and purity boundary audit outcomes must all pass as structural prerequisites before Phase 7 convergence can be declared. These are hook-enforced, not self-certified (Core Principle 8).
 
 ---
 
@@ -333,7 +333,7 @@ VSDD inherits VDD's **hallucination-based termination**, extended across every l
 | --- | --- |
 | **Requirements (SRS)** | Gate 1 cleared with no open findings; the Adversary's SRS critiques are wording nitpicks, not missing requirements, absent stakeholders, or unhandled edge cases. |
 | **Spec** | The Adversary's spec critiques are nitpicks about wording, not about missing behaviour, ambiguity, or verification gaps. |
-| **Tests** | The Adversary can't identify a meaningful untested scenario. Mutation testing confirms high kill rate. |
+| **Tests** | The Adversary can't identify a meaningful untested scenario. Every surviving mutant has been killed or justified as equivalent. |
 | **Implementation** | The Adversary is forced to invent problems that don't exist in the code. |
 | **Verification** | All properties from the Phase 2b catalog pass formal proof. Fuzzers find nothing. Purity boundaries are intact. |
 | **Edit minimality** | No unrequested structural changes — no nesting, branching, or control flow introduced beyond what each fix required. Diff scope matches work item scope. |
@@ -435,7 +435,7 @@ The underlying principle is Core Principle 8 applied to data: structure the work
 
 **Ecosystem positioning:** On Piskala's three-level SDD rigor taxonomy[^piskala], VSDD sits at **L2+ (Spec-Anchored with formal hardening approaching L3)**. L2 (Spec-Anchored) means the spec is maintained through the full project lifecycle, every change requires an addendum, and full REQ→test→implementation→review traceability is enforced. VSDD adds Phase 6 formal hardening (Kani/TLA+) that pure L2 frameworks do not have, without going full L3 (Spec-as-Source, where code is generated directly from the spec and not manually edited).
 
-**Calibration heuristic (Piskala):** Before choosing a rigor level, answer one question: *"How many times in the past year did someone ask about requirements-to-test traceability?"* Zero times — L1 (Spec-First) is sufficient. Once — move to L2 (VSDD). More than once, or if the project has a greater than 80% chance of being audited — L2 (VSDD) plus CSDD security clauses for the security-critical paths.[^piskala]
+**Calibration heuristic (Piskala):** Before choosing a rigor level, answer one question: *"How many times in the past year did someone ask about requirements-to-test traceability?"* Zero times — L1 (Spec-First) is sufficient. Once — move to L2 (VSDD). More than once, or if an audit is likely — L2 (VSDD) plus CSDD security clauses for the security-critical paths.[^piskala]
 
 VSDD is high-ceremony by design. It's worth the overhead when:
 
