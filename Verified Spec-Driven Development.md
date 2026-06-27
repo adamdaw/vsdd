@@ -10,7 +10,7 @@
 - **Test-Driven Development (TDD):** Tests are written *before* code. Red → Green → Refactor. No code exists without a failing test that demanded it.
 - **Verification-Driven Development (VDD):** Subject all surviving code to adversarial refinement until a hyper-critical reviewer is forced to hallucinate flaws.
 
-VSDD treats these not as competing philosophies but as **sequential gates** in a single pipeline.[^merrill] Specs define *what*. Tests enforce *how*. Adversarial verification ensures *nothing was missed*. AI models orchestrate every phase, with the human developer serving as the strategic decision-maker and final authority.
+VSDD treats these not as competing philosophies but as **sequential gates** in a single pipeline. Specs define *what*. Tests enforce *how*. Adversarial verification ensures *nothing was missed*. AI models orchestrate every phase, with the human developer serving as the strategic decision-maker and final authority.
 
 VSDD is **actor-agnostic**: every role in the pipeline — Builder, Adversary, Tracker — can be fulfilled by a human, an AI agent, or a combination of both. Where the document references AI models, this describes the most common implementation; the principles hold equally for human practitioners. A team working VSDD with no AI involvement would apply the same gates, the same traceability requirements, and the same adversarial independence constraints. The AI layer accelerates execution. The structure is independent of who executes it.
 
@@ -29,7 +29,7 @@ VSDD is **actor-agnostic**: every role in the pipeline — Builder, Adversary, T
 
 ### **II. Agent Roles — 5Cs Characterisation**
 
-Each VSDD agent role is defined through the five dimensions that govern effective AI collaboration: **Constraints, Context, Curation, Conceptualization, Creativity** — a framework developed in *[Five Categories of Human Excellence in the Age of AI](https://adamdaw.com/writing/five-categories-of-human-excellence/)* (Daw, 2026). The 5Cs were originally articulated as the surfaces where human judgment concentrates in human-AI collaboration; their application here to agent role definition demonstrates that they function as a general design language, not only a practice checklist.
+Each VSDD agent role is defined through the five dimensions that govern effective AI collaboration: **Constraints, Context, Curation, Conceptualization, Creativity** — a framework developed in *Five Categories of Human Excellence in the Age of AI* (Daw, 2026).[^5cs] The 5Cs were originally articulated as the surfaces where human judgment concentrates in human-AI collaboration; their application here to agent role definition demonstrates that they function as a general design language, not only a practice checklist.
 
 #### The Architect *(human developer)*
 
@@ -115,6 +115,10 @@ Different decomposition strategies carry different risk profiles when spec chang
 
 ### **III. The VSDD Pipeline**
 
+**Prerequisite (whole pipeline): the Constitution.** Before any feature work begins — before Phase 1 — the Architect establishes a project-level **Constitution**: the standing governing principles, architectural rules, and quality goals that all per-feature requirements and Specs must honour. The Constitution is a living document owned by the Architect; it does not change per feature. If a requirement or Spec would require violating the Constitution, the Architect must consciously amend the Constitution first rather than allowing silent exceptions.[^speckit]
+
+**Dependency Hygiene Policy.** The Constitution SHOULD establish a project-wide dependency hygiene policy covering all features. Minimum viable content: (1) a *justification requirement* — any new dependency must document what it provides that existing dependencies or the standard library cannot; (2) a *pinning strategy* — direct dependencies pinned via lock file; no floating version ranges in production artifacts; (3) a *review checklist* that the Adversary applies on every PR introducing a new dependency (see Phase 4, item 7). For projects on a security-critical path, the policy MAY extend to OpenSSF Scorecard requirements or equivalent maintenance and provenance criteria.[^openssf]
+
 #### **Phase 1 — Requirements Refinement**
 
 *Before the system is designed, the problem is made legible. Requirements are refined into an approved baseline — the SRS — and nothing is designed against requirements that have not survived their own gate.*
@@ -127,7 +131,7 @@ A Socratic dialog agent — or a structured deliberation session — asks questi
 
 1. **The SRS (Clarified Requirements).** Every implicit assumption, alternative interpretation, and intent clarification surfaced during deliberation is written explicitly into the requirements document. This enriched document — not the original requirements stub — is the input to Phase 2 and the artifact reviewed at Gate 1. The SRS is the Architect's intent made legible.
 
-2. **ADR entries.** Rejected alternatives, reasoning behind significant decisions, trade-offs consciously accepted. Committed to the repository (arc42 Section 9 / `Constitution.md` ADR section) as human-readable records for the Architect and future maintainers.
+2. **ADR entries.** Rejected alternatives, reasoning behind significant decisions, trade-offs consciously accepted. Committed to the repository (arc42[^arc42] Section 9 / `Constitution.md` ADR section) as human-readable records for the Architect and future maintainers.
 
 **What the Adversary does NOT receive:** the deliberation record or ADR content. The Adversary at every gate receives only the source artifact and the artifact derived from it — at Gate 1, the original feature request and the SRS; nothing more. This boundary is not a convenience; it is the mechanism that preserves the Adversary's independence. An Adversary that knows *why* a requirement was written the way it was will probe against the specifier's reasoning rather than independently arriving at whether the conclusion is sound. The gap between what the specifier intended and what the Adversary independently finds *is* the value of the gate. Collapsing that gap by sharing the deliberation defeats the purpose.[^superpowers]
 
@@ -137,7 +141,7 @@ A Socratic dialog agent — or a structured deliberation session — asks questi
 
 The weight of the SRS is keyed to the decomposition unit:
 
-- **Epic-sized work** — a requirement that will fan out into multiple independently-deployable work items — gets the **full SRS**: a structured requirements document along the lines of ISO/IEC/IEEE 29148.[^iso29148] Its sections: Purpose and Scope; Stakeholders (role, goals, priority); Business Requirements (each a goal with a measurable success criterion, MoSCoW-prioritised); Functional Requirements (user stories — *As a [role], I want [capability], so that [benefit]*); Non-Functional Requirements (ISO 25010 quality categories, each with a measurable criterion); Constraints; Assumptions and Dependencies (with impact-if-wrong); Acceptance Criteria (Gherkin, per Must requirement); and a Requirements Traceability Matrix. The epic-level SRS is the artifact that *feeds the decomposition* into work items.
+- **Epic-sized work** — a requirement that will fan out into multiple independently-deployable work items — gets the **full SRS**: a structured requirements document along the lines of ISO/IEC/IEEE 29148.[^iso29148] Its sections: Purpose and Scope; Stakeholders (role, goals, priority); Business Requirements (each a goal with a measurable success criterion, MoSCoW-prioritised); Functional Requirements (user stories — *As a [role], I want [capability], so that [benefit]*); Non-Functional Requirements (ISO 25010[^iso25010] quality categories, each with a measurable criterion); Constraints; Assumptions and Dependencies (with impact-if-wrong); Acceptance Criteria (Gherkin, per Must requirement); and a Requirements Traceability Matrix. The epic-level SRS is the artifact that *feeds the decomposition* into work items.
 
 - **Work-item-sized work** — a single, independently-deployable unit — gets the **light SRS**: EARS-format requirements plus Gherkin acceptance criteria, grouped by how each is confirmed (automatically / visible in the environment / by a person). A work item born from an epic inherits the relevant slice of the epic SRS and adds only its specifics.
 
@@ -170,10 +174,6 @@ The SRS is iterated until the Adversary can find no legitimate holes. **No techn
 #### **Phase 2 — Spec Crystallization**
 
 *Nothing gets built until the contract is airtight — and the architecture is verification-ready by design.*
-
-**Prerequisite: the Constitution.** Before any feature work begins, the Architect establishes a project-level **Constitution** — the standing governing principles, architectural rules, and quality goals that all per-feature Specs must honour. The Constitution is a living document owned by the Architect; it does not change per feature. If a feature Spec would require violating the Constitution, the Architect must consciously amend the Constitution first rather than allowing silent exceptions.[^speckit]
-
-**Dependency Hygiene Policy.** The Constitution SHOULD establish a project-wide dependency hygiene policy covering all features. Minimum viable content: (1) a *justification requirement* — any new dependency must document what it provides that existing dependencies or the standard library cannot; (2) a *pinning strategy* — direct dependencies pinned via lock file; no floating version ranges in production artifacts; (3) a *review checklist* that the Adversary applies on every PR introducing a new dependency (see Phase 4, item 7). For projects on a security-critical path, the policy MAY extend to OpenSSF Scorecard requirements or equivalent maintenance and provenance criteria.[^openssf]
 
 With an approved SRS in hand, the Builder produces a **formal specification document** — the **Software Design Document (SDD)** — for each unit of work. This phase encodes the SRS's requirements into a technical contract for developers, architects, and reviewers: it does not merely restate *what* the software does — it defines *how* it is built and *what must be provable about it*, and structures the architecture accordingly.
 
@@ -235,9 +235,9 @@ The Builder translates the spec directly into executable tests:
 - **Integration Tests:** Tests that verify the module works correctly within the larger system context defined in the spec.
 - **Property-Based Tests:** Where applicable, the Builder generates property-based tests (e.g., using Hypothesis, fast-check, or proptest) that assert invariants hold across randomised inputs.
 
-**The Red Gate:** All tests must *fail* before any implementation begins. If a test passes without implementation, the test is suspect — it's either testing the wrong thing or the spec was wrong. The Builder flags this for human review. This gate should be enforced structurally: a pre-implementation hook that verifies at least one failing test exists before allowing code edits, consistent with External Enforcement over Persuasion (Core Principle 8).
+**The Red Gate:** Every newly written test for the current work item must *fail* before any implementation begins, while the pre-existing suite stays green. (In a greenfield project this reduces to "all tests fail"; in an existing codebase only the new work-item tests are expected to be red — the rest must remain green, and a regression there is itself a finding.) If a new work-item test passes without implementation, it is suspect — either testing the wrong thing or the spec was wrong — and the Builder flags it for human review. This gate should be enforced structurally: a pre-implementation hook that verifies the work item's new tests are present and failing against the baseline before allowing code edits, consistent with External Enforcement over Persuasion (Core Principle 8).
 
-**Regression Test Verification (Red–Green–Revert cycle):** For bug fixes, the Red Gate has a stricter form. After writing the regression test: (1) confirm it *fails* on the broken code; (2) apply the fix and confirm the test *passes*; (3) *revert* the fix and confirm the test *fails* again; (4) restore the fix. A regression test that passes before the fix is applied was never testing the right thing — it cannot catch a regression. Only the three-step Red → Green → Revert → Red sequence proves the test is genuinely tied to the defect it is meant to guard against.
+**Regression Test Verification (Red–Green–Revert cycle):** For bug fixes, the Red Gate has a stricter form. After writing the regression test: (1) confirm it *fails* on the broken code; (2) apply the fix and confirm the test *passes*; (3) *revert* the fix and confirm the test *fails* again; (4) restore the fix. A regression test that passes before the fix is applied was never testing the right thing — it cannot catch a regression. Only the four-step Red → Green → Revert → Red sequence proves the test is genuinely tied to the defect it is meant to guard against.
 
 **Step 3b: Minimal Implementation**
 
@@ -274,7 +274,7 @@ Phase 4 runs as **two sequential passes**. Pass 2 is not dispatched until Pass 1
 
 The Adversary reads the implementation directly. It does *not* take the Builder's summary of what was done at face value — the Builder's report describes intent; the code describes fact. Discrepancies between them are findings. The Adversary verifies:
 
-1. **Spec Fidelity:** Does the implementation actually satisfy the spec, or did the tests inadvertently encode a misunderstanding? The Adversary treats the spec as a constitution: the implementation must satisfy it fully and explicitly, not approximately. There is no partial credit for "mostly implemented" or "intended to satisfy" — either the requirement is met, demonstrably, or it is not.[^constitutional]
+1. **Spec Fidelity:** Does the implementation actually satisfy the spec, or did the tests inadvertently encode a misunderstanding? The Adversary treats the spec as a constitution — borrowing the framing of Constitutional AI[^constitutional] as an analogy, not as evidence (there the "constitution" governs model training; here it is the behavioural spec, enforced by adversarial review rather than RL). The implementation must satisfy the spec fully and explicitly, not approximately. There is no partial credit for "mostly implemented" or "intended to satisfy" — either the requirement is met, demonstrably, or it is not.
 2. **Spec Gaps Revealed by Implementation:** Sometimes writing the code reveals that the spec was incomplete. The Adversary looks for implemented behaviour that isn't covered by the spec — and for spec requirements that have no corresponding implementation the Builder failed to mention.
 
 Pass 1 findings require a return to Phase 2 or Phase 3 before Pass 2 is run.
@@ -291,7 +291,7 @@ Pass 1 findings require a return to Phase 2 or Phase 3 before Pass 2 is run.
 
 **Independence Reset:** The Adversary invoked for each pass must have had no involvement in producing the artifact under review, and no involvement in the prior pass. For AI actors: fresh context window. For human actors: independent reviewer assignment — someone who was not present at prior review sessions. No relationship drift. No accumulated goodwill. (See Core Principle 7 — Entropy Resistance.)
 
-**Artifact Locking:** Once the Adversary issues a pass declaration for a phase artifact, that artifact is locked — no back-edits. If subsequent work reveals a gap in a locked artifact, it is captured in a dated addendum file, not by revising the original. This preserves the audit trail and prevents retroactive rationalisation of prior decisions.[^rlm]
+**Artifact Locking:** Once the Adversary issues a pass declaration for a phase artifact, that artifact is locked — no back-edits. If subsequent work reveals a gap in a locked artifact, it is captured in a dated addendum file, not by revising the original. This preserves the audit trail and prevents retroactive rationalisation of prior decisions.[^rlm] When the Feedback Loop (Phase 5) returns to an earlier phase, the revised artifact is a new, versioned iteration — or a dated addendum — that re-enters its gate for fresh review. The lock forbids *silent* back-edits, not principled revision under re-review; every version carries its own committed pass record.
 
 ---
 
@@ -338,7 +338,7 @@ VSDD inherits VDD's **hallucination-based termination**, extended across every l
 | **Verification** | All properties from the Phase 2b catalog pass formal proof. Fuzzers find nothing. Purity boundaries are intact. |
 | **Edit minimality** | No unrequested structural changes — no nesting, branching, or control flow introduced beyond what each fix required. Diff scope matches work item scope. |
 
-**Maximum Viable Refinement** is reached when every dimension has converged. The software is considered **Zero-Slop** — every line of code traces to an SRS requirement (REQ-NNN) through its spec contract, is covered by a test, has survived adversarial scrutiny, and the critical path is formally proven.
+**Maximum Viable Refinement** is reached when every dimension has converged. The software meets the **Zero-Slop** bar — the convergence table above with every row green — meaning every line of code traces to an SRS requirement (REQ-NNN) through its spec contract, is covered by a test, has survived adversarial scrutiny, and the critical path is formally proven.
 
 **Convergence requires evidence, not declaration.** The Adversary's convergence pass is not complete until the pass record — including the exact artifacts reviewed, the verification commands run, and the "Forced to manufacture flaws" declaration — is committed to the repository. A convergence claim unaccompanied by this record is an assertion without evidence and does not satisfy Principle 11.
 
@@ -381,7 +381,7 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 
 6. **Traceability:** The Tracker ensures every spec item, test, and line of code has a corresponding tracked work item. Nothing slips through the cracks.
 
-7. **Entropy Resistance:** The Adversary must have no prior relationship with the artifact under review — no involvement in producing it, no knowledge of the reasoning behind it, no accumulated goodwill toward its author. What persists between gate passes is the artifact itself, not the history of producing it. For AI actors, independence is implemented by resetting context on every adversarial pass. For human actors, it is implemented by assigning reviewers who had no role in producing the artifact — someone who was not in the room when the spec was written or the code was designed. The mechanism differs; the principle is the same in both cases: reviewer independence is structural, not motivational. A reviewer cannot simply decide to be impartial after being involved in production; independence must be arranged, not requested.[^reflexion]
+7. **Entropy Resistance:** The Adversary must have no prior relationship with the artifact under review — no involvement in producing it, no knowledge of the reasoning behind it, no accumulated goodwill toward its author. What persists between gate passes is the artifact itself, not the history of producing it. For AI actors, independence is implemented by resetting context on every adversarial pass. For human actors, it is implemented by assigning reviewers who had no role in producing the artifact — someone who was not in the room when the spec was written or the code was designed. The mechanism differs; the principle is the same in both cases: reviewer independence is structural, not motivational. A reviewer cannot simply decide to be impartial after being involved in production; independence must be arranged, not requested.
 
 8. **External Enforcement over Persuasion:** Phase gates must be enforced by deterministic, non-AI scripts wherever possible — exit-code CI checks, pre-commit hooks, test runners — not by asking the Builder or Adversary to self-certify. AI confirmation of AI output is not a gate; a process that exits `1` on failure is. Prompts and instructions constrain agent behaviour at the soft level; tooling enforces it at the hard level. Where possible, validation at each phase gate should be zero-token: deterministic scripts, not LLM review.[^codeleash]
 
@@ -398,7 +398,7 @@ At any point, you can ask: *"Why does this line of code exist?"* and trace it al
 VSDD is explicitly designed for multi-model AI workflows:
 
 - **The Builder** benefits from large context windows and strong code generation (Claude, GPT-4, etc.). It needs to hold the full spec, test suite, and implementation simultaneously.
-- **The Adversary** benefits from a *different* model or configuration — and more importantly, from structurally opposed objectives. VSDD uses build vs. break role separation, not merely different model instances with different parameters. Multi-agent debate between identical instances still converges on shared biases; genuinely opposed objectives force the disagreement that surfaces real flaws.[^debate]
+- **The Adversary** benefits from a *different* model or configuration — and more importantly, from structurally opposed objectives. VSDD uses build vs. break role separation, not merely different model instances with different parameters. Multi-agent debate improves reasoning,[^debate] but debate between identical instances tends to converge on shared biases; genuinely opposed objectives force the disagreement that surfaces real flaws — a design hypothesis VSDD adopts, not a result the debate literature establishes.
 - **The Human** is not a bottleneck — they're the strategic layer. They approve specs, resolve disputes, and make judgment calls that AI can't. The human's role is *elevated*, not diminished, by the AI orchestration.
 
 **Session Handoff Notes (all roles):** When any work session ends — whether by context compression, explicit reset, or natural close — a handoff note is committed to the repository for the active work item: current state, decisions made this session, blockers, and the immediate next step. The note's *content* lives in the repo (Repo-as-Source-of-Truth — this is a phase artifact, not a conversation); the *active item pointer* lives in the Tracker. A fresh session reads the handoff note from the repo before touching any code or spec. This applies to every role: the Builder records implementation state; the Adversary records what converged and what remains open; the Architect records decisions made. The Tracker is not the repository for handoff note content — the repo is.[^chainlink]
@@ -455,11 +455,7 @@ For rapid prototyping or throwaway scripts, use the parts that make sense — TD
 
 ### References
 
-[^merrill]: Merrill, W., & Sabharwal, A. (2023). The Expressive Power of Transformers with Chain of Thought. *NeurIPS 2023*. arXiv:2310.07923. https://arxiv.org/abs/2310.07923
-
 [^self-refine]: Madaan, A., Tandon, N., Gupta, P., et al. (2023). Self-Refine: Iterative Refinement with Self-Feedback. *NeurIPS 2023*. arXiv:2303.17651. https://arxiv.org/abs/2303.17651
-
-[^reflexion]: Shinn, N., Cassano, F., Berman, E., et al. (2023). Reflexion: Language Agents with Verbal Reinforcement Learning. *NeurIPS 2023*. arXiv:2303.11366. https://arxiv.org/abs/2303.11366
 
 [^debate]: Du, Y., Li, S., Torralba, A., Tenenbaum, J. B., & Mordatch, I. (2023). Improving Factuality and Reasoning in Language Models through Multiagent Debate. arXiv:2305.14325. https://arxiv.org/abs/2305.14325
 
@@ -470,6 +466,12 @@ For rapid prototyping or throwaway scripts, use the parts that make sense — TD
 [^ears]: Mavin, A. (2009). EARS (Easy Approach to Requirements Syntax). IEEE International Requirements Engineering Conference. Originally developed at Rolls-Royce aerospace; eliminates modal ambiguity in requirement statements.
 
 [^iso29148]: ISO/IEC/IEEE 29148:2018. *Systems and software engineering — Life cycle processes — Requirements engineering.* The international standard defining the content and structure of a Software Requirements Specification (SRS): stakeholders, business and functional requirements, non-functional/quality requirements, constraints, and traceability.
+
+[^iso25010]: ISO/IEC 25010:2011. *Systems and software engineering — SQuaRE — System and software quality models.* Eight product-quality characteristics: functional suitability, performance efficiency, compatibility, usability, reliability, security, maintainability, portability.
+
+[^arc42]: arc42 — an open template for software-architecture documentation (Starke & Hruschka). Section 9 holds architecture decisions (ADRs). https://arc42.org/
+
+[^5cs]: Daw, A. (2026). *Five Categories of Human Excellence in the Age of AI*. https://adamdaw.com/writing/five-categories-of-human-excellence/
 
 [^marri]: Marri, S. R. (2026). Constitutional Spec-Driven Development: Enforcing Security by Construction in AI-Assisted Code Generation. arXiv:2602.02584. https://arxiv.org/abs/2602.02584
 
