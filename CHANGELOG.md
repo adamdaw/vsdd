@@ -15,6 +15,7 @@ All notable changes to the VSDD methodology are recorded here.
 - Made the five derivation gates map onto real pipeline steps: a dedicated **Gate 3** test review *before* implementation; Pass 1 reviews implementation against spec **and** tests (Gate 4); **Gate 5** reframed as the deterministic verification gate (prover = adversary).
 - Redefined convergence as committed evidence + an explicit Architect sign-off on **every** remaining finding (adversary or tool) — no severity auto-pass.
 - Narrowed "actor-agnostic" to the execution roles; the Architect is the non-delegable human authority.
+- **Restricted the no-red justification to a narrow residual.** Recast Principle 3's TDD exemption as an ordered ladder (test it → scaffold it → Gate 5/Constitution → §A.10), with no-red reachable only as the last resort for a platform-mandated inert construct; the justification must name which rungs it ruled out (no bare one-liner), and the adversary checks the disposition. Prevents the catch-all from absorbing cases that are now better classified — especially test scaffolding.
 
 ### Fixed
 - Citation-integrity pass: removed two unsupported citations, recast two as analogy/hypothesis, and corrected a misattributed statistic — each verified against its primary source.
