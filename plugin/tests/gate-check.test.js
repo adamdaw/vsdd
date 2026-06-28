@@ -32,4 +32,8 @@ assert.equal(decide(abs("src/app.js"), gate3).block, false);
 // file outside project root -> allow
 assert.equal(decide("/elsewhere/x.js", noGates).block, false);
 
+// (e) test scaffolding: pre-Gate-3 source is blocked unless the edit is scaffold-tagged
+assert.equal(decide(abs("src/lang.ts"), noGates, false).block, true);
+assert.equal(decide(abs("src/lang.ts"), noGates, true).block, false); // // vsdd:scaffold edit allowed
+
 console.log("gate-check: all assertions passed");

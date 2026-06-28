@@ -53,6 +53,42 @@ function satisfied(root, spec) {
   return st.size > 0;
 }
 
+// Test-scaffolding integrity (Gate 3): if any `// vsdd:scaffold`-tagged edit
+// exists, a scaffold ledger MUST be present — the ledger carries the red-stays-red
+// evidence the Adversary verifies. This is the mechanical presence half; the
+// substantive "greened no target test" check is the committed Red-Gate evidence +
+// the Gate-3 Adversary (vsdd-advance executes no tests).
+// ponytail: bounded scan — skips heavy/generated dirs and large/binary files;
+// if it ever costs too much, gate on an explicit state.json flag instead.
+const SCAFFOLD_SENTINEL = "vsdd:scaffold";
+const SCAN_SKIP = new Set([
+  "node_modules", ".git", "dist", "build", "out", "coverage", "vendor", ".vsdd",
+]);
+function treeUsesScaffolding(dir) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  for (const e of entries) {
+    if (e.name.startsWith(".") && e.isDirectory() && e.name !== ".github") continue;
+    const full = path.join(dir, e.name);
+    if (e.isDirectory()) {
+      if (SCAN_SKIP.has(e.name)) continue;
+      if (treeUsesScaffolding(full)) return true;
+    } else if (e.isFile()) {
+      try {
+        if (fs.statSync(full).size > 512 * 1024) continue;
+        if (fs.readFileSync(full, "utf8").includes(SCAFFOLD_SENTINEL)) return true;
+      } catch {
+        // unreadable/binary — skip
+      }
+    }
+  }
+  return false;
+}
+
 function main() {
   const file = findStateFile(process.cwd());
   if (!file) {
@@ -75,6 +111,14 @@ function main() {
     console.error(`Cannot clear ${GATE_NAME[nextGate]}: required artifacts missing or empty:`);
     for (const m of missing) console.error(`  - ${m}`);
     console.error(`Create them (or edit .vsdd/state.json "artifacts") and re-run vsdd-advance.`);
+    process.exit(1);
+  }
+
+  // Gate 3: test scaffolding requires its ledger (see Phase 3, the Red Gate).
+  if (nextGate === 3 && treeUsesScaffolding(root) && !satisfied(root, ".vsdd/tdd/scaffold-ledger.md")) {
+    console.error(`Cannot clear ${GATE_NAME[nextGate]}: '// vsdd:scaffold'-tagged edits exist but`);
+    console.error(`  .vsdd/tdd/scaffold-ledger.md is missing or empty.`);
+    console.error(`Record each scaffold edit + the evidence its target tests stayed red, then re-run.`);
     process.exit(1);
   }
 

@@ -54,14 +54,30 @@ function findState(start) {
   }
 }
 
+// A scaffold edit declares itself with the sentinel in the incoming content.
+// Test scaffolding = minimum non-functional code to make a target test
+// executable-red (e.g. vendor a grammar, register a language). Permitted before
+// Gate 3 on trust-but-verify: the tag lets the edit through; the integrity check
+// is the Gate-3 discriminator (the edit must green no target test), enforced via
+// the scaffold ledger + committed Red-Gate evidence + the Adversary, not here.
+// ponytail: substring match on the incoming payload — cheap and sufficient; the
+// gate is the discriminator at Gate 3, not the tag.
+const SCAFFOLD_SENTINEL = "vsdd:scaffold";
+function isScaffoldEdit(ti) {
+  const fields = [ti.content, ti.new_string];
+  if (Array.isArray(ti.edits)) for (const e of ti.edits) fields.push(e && e.new_string);
+  return fields.some((f) => typeof f === "string" && f.includes(SCAFFOLD_SENTINEL));
+}
+
 // Pure decision: given the resolved file path and a located state, allow or block.
-function decide(filePath, found) {
+function decide(filePath, found, scaffold) {
   if (!found) return { block: false };
   const rel = path.relative(found.root, filePath);
   if (rel.startsWith("..")) return { block: false }; // outside the project
   if (classify(rel) === "artifact") return { block: false };
   const passed = Array.isArray(found.state.gates_passed) ? found.state.gates_passed : [];
   if (passed.includes(3)) return { block: false };
+  if (scaffold) return { block: false }; // tagged scaffolding — verified at Gate 3
   const phase = found.state.phase ?? "?";
   return {
     block: true,
@@ -95,7 +111,7 @@ function main() {
   const cwd = input.cwd || process.cwd();
   const filePath = path.isAbsolute(target) ? target : path.resolve(cwd, target);
   const found = findState(path.dirname(filePath));
-  const verdict = decide(filePath, found);
+  const verdict = decide(filePath, found, isScaffoldEdit(ti));
 
   if (verdict.block) {
     process.stderr.write(verdict.reason + "\n");
