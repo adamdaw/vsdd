@@ -28,7 +28,7 @@ INCORRECTLY COVERED means: a test exists for this requirement but the assertion 
 
 `automated` Gherkin scenarios must map to an executable test; `environment-visible` and `person-confirmed` scenarios map instead to a defined manual-acceptance record, not an executable test — do not flag those as uncovered.
 
-5. If a scaffold ledger is present, check each `// vsdd:scaffold`-tagged edit against the **red-stays-red discriminator**: read the tagged diff and confirm it is genuinely non-functional — it makes target tests *executable* (skip→red) but greens *none*. The committed Red-Gate evidence must show every scaffold-targeted test red. A scaffold tag on code that in fact makes a target test pass is implementation smuggled past the gate — flag it INCORRECT (fixed-only), not a pass.
+5. If a scaffold ledger is present, check each `// vsdd:scaffold`-tagged edit against the **red-stays-red discriminator**: read the tagged diff and confirm it is genuinely non-functional — it makes *behavioural* target tests *executable* (skip→red) but greens *none* of them. The committed Red-Gate evidence must show every behavioural scaffold-targeted test red. (Infrastructure-presence tests — that a vendored asset or its registration exists — may green; vendoring is rung-3 build/infra, not behaviour.) A scaffold tag on code that in fact makes a *behavioural* target test pass is implementation smuggled past the gate — flag it INCORRECT (fixed-only), not a pass.
 
 ## Output format
 
