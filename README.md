@@ -7,7 +7,7 @@ A gated software-engineering methodology — AI-orchestrated by default, but act
 ## Read the methodology
 
 - **[methodology/VSDD.md](methodology/VSDD.md)** — the full methodology.
-- **[methodology/appendix-a-schemas.md](methodology/appendix-a-schemas.md)** — normative schemas & templates: CSDD security-clause schema, Constitution template, provable-property decision table, fuzzing and dependency/CVE policies, research artifact, the pass-record, finding/disposition, work-item, and manual-acceptance-evidence schemas, the SDD and TDD-compliance-log schemas, the Documented-Limitation (non-convergence) and SRS schemas, and the Intent and non-converged-release schemas (§A.1–A.16).
+- **[methodology/appendix-a-schemas.md](methodology/appendix-a-schemas.md)** — normative schemas & templates: CSDD security-clause schema, Constitution template, provable-property decision table, fuzzing and dependency/CVE policies, research artifact, the pass-record, finding/disposition, work-item, and manual-acceptance-evidence schemas, the SDD and TDD-compliance-log schemas, the Documented-Limitation (non-convergence) and SRS schemas, the Intent and non-converged-release schemas, the reviewer-bundle / evidence-layout schema, the ADR schema, and the Gate 1 elicitation-facts schema (§A.1–A.19).
 - **[methodology/citation-audit.md](methodology/citation-audit.md)** — every empirical citation checked against its primary source.
 
 ## The pipeline at a glance
@@ -24,15 +24,15 @@ A gated software-engineering methodology — AI-orchestrated by default, but act
 
 Gate 3 is *internal* to Phase 3 — after test generation, before implementation; the other gates fall at phase end. **Gate 4 grants entry to Phase 6 (formal hardening), not merge/release authority** — a *converged* release stays blocked until Gate 5 and the convergence roll-up are also committed; the only alternative is a narrow, labelled *non-converged release* of last resort (§A.16).
 
-Convergence is declared per dimension by committed evidence: every finding — adversary or tool, at any severity — is dispositioned. A derivation-fidelity finding (Gates 1–3, Gate 4 Pass 1) is *fixed*, never signed off — a gap between a derived artifact and its source is corrected, not accepted; a quality/tool finding (Gate 4 Pass 2, Gate 5) is fixed or carries an explicit, committed Architect sign-off. Two classes can never be signed off: a CSDD MUST-security violation (fix or compliance-verify only) and an undischarged Prove-classified property (prove, re-architect, or — only when proving, re-architecting, *and* de-scoping the feature are all infeasible — ship as a labelled non-converged release of last resort, never as a pass or a convergence). A MAY-level advisory is not a finding. There is no severity cutoff that lets a defect ship unexamined or undispositioned.
+Convergence is declared per dimension by committed evidence: every finding — adversary or tool, at any severity — is dispositioned. A derivation-fidelity finding (Gates 1–3, Gate 4 Pass 1) is *fixed*, never signed off — a gap between a derived artifact and its source is corrected, not accepted; a quality/tool finding (Gate 4 Pass 2, Gate 5) is fixed or carries an explicit, committed Architect sign-off. Sign-off accepts a *risk*; several categories can never be signed off because they are *defects* or *non-convergence*, not risks. Two are non-waivable baselines: a CSDD MUST-security violation (fix or compliance-verify only) and an undischarged Prove-classified property (prove, re-architect to provable, de-scope the feature via a reviewed SRS/SDD change as applicable, or — only when all three are infeasible — authorize a labelled non-converged release of last resort, never as a pass or a convergence). That release path is eligible **only** for a property that passed Gate 2 as provable but failed to discharge at Gate 5 execution; a property known-unprovable at Gate 2 is fixed there, never released. Demonstrated Gate 5 defects — fuzz crashes, non-equivalent mutation survivors, and purity-boundary violations — are also fixed, not signed off (a verified-equivalent mutant closes as resolved). Genuinely waivable risks — SHOULD-level clauses, analyzer findings, dependency CVEs — may carry a committed sign-off. A MAY-level advisory is not a finding. There is no severity cutoff that lets a defect ship unexamined or undispositioned.
 
 ## Status
 
-The methodology is actively used and refined on real project work. A Claude Code **plugin** that enforces the gates — per-phase skills, a state-driven `PreToolUse` hook, and restricted reviewer agents — is in development and will live in this repo.
+The methodology is stable and under active refinement. A Claude Code **plugin** that enforces the gates — per-phase skills, a state-driven `PreToolUse` hook, and restricted reviewer agents — is in development and will live in this repo.
 
 ## Provenance
 
-Every empirical citation is checked against its primary source — the [citation audit](methodology/citation-audit.md) records, for each, what the source establishes and the locator where the claim appears, verified against the source's full text. The methodology has been hardened through iterated adversarial review.
+Every empirical citation is checked against its primary source — the [citation audit](methodology/citation-audit.md) records, for each, what the source establishes and the locator where the claim appears, verified against the source's full text.
 
 ## License
 
