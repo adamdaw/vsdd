@@ -1,0 +1,46 @@
+---
+name: vsdd-phase-3-tests-impl
+description: >
+  Drive VSDD Phase 3 — Test Generation & TDD Implementation. Write failing tests
+  from the spec, clear Gate 3 (before any implementation), then implement
+  minimally under TDD. Invoke after Gate 2 clears, or when the user is writing
+  tests or implementation under VSDD.
+---
+
+# Phase 3 — Test Generation & TDD Implementation (→ Gate 3, then implement)
+
+Red → Green → Refactor, enforced. The gate hook **blocks implementation source until Gate 3 clears** — but markdown and test files are always allowed, so you write the tests first. See `methodology/VSDD.md` Phase 3 and §A.10 (manual acceptance), §A.12 (TDD compliance log).
+
+## Step 3a — Test Suite Generation (implementation still locked)
+
+Translate the spec directly into executable tests:
+
+- **Unit tests:** one+ per behavioural-contract item; every postcondition an assertion, every precondition violation a test expecting a specific error.
+- **Edge-case tests:** every item in the Edge Case Catalog.
+- **Integration tests** and **property-based tests** (Hypothesis/fast-check/proptest) for invariants over randomised inputs.
+
+**The Red Gate:** every new work-item test must **fail** while the pre-existing suite stays **green**. A new test that passes with no implementation is suspect — flag it. The one accepted substitute is a committed **no-red justification** (Principle 3) for a stub/scaffold with no forceable red state.
+
+**Bug fixes (Red–Green–Revert):** (1) confirm the regression test fails on broken code; (2) apply the fix, confirm it passes; (3) revert, confirm it fails again; (4) leave the code reverted (red). The apply/revert is a throwaway validation patch — never committed onto the reviewed branch; commit only the four-command **cycle record**.
+
+## Gate 3 — Tests vs Spec (before any implementation)
+
+Use the `vsdd-test-validator` agent (via `vsdd-adversary`, Gate 3). With the suite written and red, it reviews tests against the spec + the Red-Gate evidence: every contract item and `automated` Gherkin scenario maps to an executable test; `environment-visible` / `person-confirmed` scenarios map to a `planned` manual-acceptance record (§A.10); no test is tautological or over-mocked; the Red Gate holds. Findings are **fixed-only** and return to Step 3a (tests) or Phase 2 (spec).
+
+**Clear the gate:** commit the Gate 3 pass record, then `/vsdd-advance`. This unlocks implementation source.
+
+## Step 3b — Minimal Implementation (now unlocked)
+
+One failing test at a time: pick it, write the smallest code that passes, run the full suite (nothing else breaks), repeat. Keep a **TDD compliance log** (§A.12): failing test → implementation → pass, with changed files, linked test ID, and a one-line justification the diff is confined to satisfying that test. Minimality is checked against this log at Gate 4, not self-certified.
+
+## Step 3c — Refactor
+
+After green, refactor for clarity/performance/NFRs under the green suite (a behaviour-preserving refactor needs no new red test; it belongs in a separately-scoped commit, not folded into a fix).
+
+## Step 3d — Builder Self-Review
+
+A pre-flight self-critique against the spec — fix what you can, escalate what needs the Architect. **Not** a gate; not a substitute for adversarial review. (The Human Checkpoint in 3c is likewise non-gating.)
+
+## Handoff
+
+Implementation complete and green → proceed to Phase 4 (`vsdd-phase-4-adversarial`). Gate 4 is cleared there; do not `/vsdd-advance` again until Gate 4 passes.
