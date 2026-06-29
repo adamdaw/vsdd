@@ -23,6 +23,11 @@ Sources: `commissionCalc` (original pipeline run), **GitNexus-Apex** (first plug
 6. **Context-free adversary in ALL phases** — primed prompts rubber-stamp PASS; the clean prompt catches majors. Bake into `vsdd-adversary` (practised throughout Apex; not yet enforced in the skill).
 7. **Gate-2 verification split** — an SDD must mark grammar/§A.6 facts (Gate-2-verified) vs host-API behaviours (Gate-3 design obligations). Bake into §A.11 SDD-authoring guidance. **See #13 — this split has a sharper failure mode than first recorded.**
 8. **Per-item state** — project-level `state.json` doesn't model concurrent per-work-item phases/gates.
+   **Sharpened 2026-06-29 (WI-1 Gate 5):** the limitation isn't just non-modelling — it emits a *wrong
+   action*. `/vsdd-advance` past the FIRST work-item's Gate 5 set the project to `phase 7` and prompted
+   "commit the Phase 7 convergence roll-up record" — false epic-convergence when only WI-1's vertical was
+   done (WI-2…4 unstarted). Fix: in a multi-WI epic, advancing past a WI's Gate 5 must route to the next
+   WI's Phase 2 per the `work-items.md` DAG, NOT to epic Phase 7; Phase 7 gates on ALL WIs cleared.
 9. **Epic execution is DAG-driven, not a binary mode** — per-item/vertical vs batched/horizontal vs a combination, Architect-selectable per epic and per subgraph, driven by which risk dominates where. The state machine must model per-item phase/gates AND the dependency edges that gate parallelism.
 
 ### From GitNexus-Apex, Phase 3–5 (2026-06-29) — NEW
@@ -58,3 +63,47 @@ Sources: `commissionCalc` (original pipeline run), **GitNexus-Apex** (first plug
     cascade-invalidating the superseded Gate-2/Gate-3 pass records. The methodology wording should make
     explicit that "route to owning phase + cascade-invalidate" IS the in-loop loop-back, available at any
     phase, not deferred.
+
+### From GitNexus-Apex, Phase 4–6 / WI-1 Gates 4–5 (2026-06-29) — NEW
+
+16. **Coverage pins must respect the host's measurement architecture.** SDD-001 §3 set a ≥80%-lines floor
+    on `languages/apex/**`, but the integration suite runs the provider configs inside a parse
+    **worker_thread from compiled `dist/`**, which main-thread v8 instrumentation cannot see — so scoped
+    coverage read ~16% and the SHALL looked unmeasurable. It is NOT a waiver case: the fix is **main-thread
+    unit anchors** that parse in-process and call the provider's pure functions directly, making the logic
+    coverage-attributable (lifted to ~92%). Bake into §A.11 SDD-authoring guidance: when integration runs
+    off-thread (workers, subprocesses, compiled output), require unit anchors so a coverage pin is
+    measurable, and don't let a worker-thread architecture masquerade as an unmeetable target.
+
+17. **Case-insensitive-keyword languages: handle keyword casing at PARSE, separately from identifier
+    case-insensitivity at RESOLUTION.** WI-1 deferred "case-insensitivity → WI-2 resolver" — but that
+    deferral is about *identifier* folding (matching `myMethod`↔`MyMethod` references). *Keyword/modifier*
+    casing is a different axis and a WI-1 **parse-correctness** concern: Apex is case-insensitive and the
+    grammar preserves source case, so a case-sensitive lowercase modifier match silently mis-classified
+    `webService`/`Public`/`GLOBAL` node attributes (`isExported`, static, final, visibility). Caught only
+    at Gate 4 Pass 2. Lesson: a "defer case-insensitivity" decision must name *which* axis (lexical-keyword
+    vs identifier-resolution); conflating them leaves a real parse bug latent. Sibling: the Gate-4 adversary
+    catching two genuine WI-1 parse-correctness bugs (annotation-argument export mis-bucketing; this one)
+    validates the context-free Pass-2 code reviewer as a real defect gate, not a rubber stamp (reinforces
+    #6).
+
+### From GitNexus-Apex, WI-2 Phase 2 / Gate 2 (2026-06-29) — NEW
+
+18. **A documented Architect disposition can itself be internally incomplete — re-run the cold adversary
+    AFTER a disposition, not just after a fix.** On WI-2's REQ-008, the Architect ratified option (a)
+    ("benchmark-parity scoping, no SRS amendment needed"). Two cold rounds later the adversary proved that
+    disposition contradicted the un-amended SRS §9 Gherkin (whose `Then` still demanded a resolved edge the
+    host emits for no language) — forcing the SRS v1.2 amendment (a) had claimed unnecessary. A finding-#13
+    sibling: the Architect reasons from *intent* and can miss an artifact-level inconsistency that the cold,
+    evidence-isolated adversary catches. **Fix:** after any disposition that re-characterises scope or
+    routes a finding, the next adversary round must read the disposition's artifacts together (SRS+SDD) and
+    re-validate consistency — the disposition is not self-certifying.
+
+19. **Host-API-heavy work items need many cold rounds + the §A.6 spike up front; budget for it.** WI-2
+    (resolution mechanics) took **12** cold Gate-2 rounds to converge (vs WI-1's far fewer), every round a
+    legitimate fixed-only finding — driven by the REQ-008 selection-algorithm amendment and the resolution
+    layer's large host-API surface. The §A.6 spike (RESEARCH-002) up front pre-empted the finding-#13 trap
+    (it proved case-insensitive resolution needs a generic §2.2 seam, option b infeasible — a pin that would
+    otherwise have detonated at Gate 3). Lesson for the methodology/plugin: flag host-API-heavy WIs at
+    decomposition, mandate the §A.6 host-behaviour spike before SDD authoring, and expect (don't truncate)
+    a long cold loop — the convergence is real, not loop thrash.
