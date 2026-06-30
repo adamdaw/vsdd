@@ -188,3 +188,19 @@ Sources: `commissionCalc` (original pipeline run), **GitNexus-Apex** (first plug
     capability), without co-owning the REQ" relationship — distinct from ownership and from a plain dependency.
     Surfaced only because the Architect rejected a "disclose and defer" framing as lazy, forcing the trace
     that revealed the principled boundary.
+
+27. **A non-parse work item's Gate 5 fuzzes its OWN owned stage, not reflexively the SECT trust boundary.**
+    WI-1's Gate 5 was documented as "the template" (fuzz `parseSourceSafe` — the SECT-001 untrusted-input
+    boundary — + mutation + purity). But WI-2 (resolution mechanics) introduces **no new parse path**: it
+    consumes WI-1's safe-parsed output, so re-fuzzing `parseSourceSafe` would be pure redundancy (already
+    discharged at WI-1 Gate 5) and would exercise *none* of WI-2's owned code. The correct WI-2 fuzz target
+    was its own owned surface — `emitApexScopeCaptures`, the resolution capture pipeline (free/member
+    classification, receiver-binding synth, arity, arg-type inference, the JSON.parse var-binding paths,
+    inheritance/ctor synth) — driven on adversarial/error-recovery trees per the NFR-001 *resolution-stage*
+    slice (resolution completes, refs left unresolved, never a throw). **Lesson:** Gate 5's fuzz obligation is
+    "saturate the WI's owned risk surface," not "re-run the SECT-boundary corpus." For a security-critical WI
+    that owns a trust boundary, those coincide; for a downstream WI they diverge. The Phase-6 guidance should
+    say: identify the WI's owned executable surface and the cross-cutting NFR slice it carries (here NFR-001's
+    resolution-path slice), and fuzz *that* — a template is a shape (corpus + bounded smoke-fuzz + mutation +
+    purity), not a fixed target. Mutation scope likewise narrows to the WI's own decision logic (WI-1's parse
+    configs were already audited at WI-1 Gate 5).
