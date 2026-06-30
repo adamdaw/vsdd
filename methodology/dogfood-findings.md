@@ -143,3 +143,48 @@ Sources: `commissionCalc` (original pipeline run), **GitNexus-Apex** (first plug
     pins a conservative/"degrade-not-lie" REQ, audit ALL resolution entry points for their independent
     best-guess fallbacks — the Gate-3 fixtures should exercise each path shape (qualified vs unqualified
     call, method vs field, exact-miss vs multi-match), or some paths ship non-conservative.
+
+### From GitNexus-Apex, WI-2 Phase 4 / Gate 4 (2026-06-30) — NEW
+
+23. **Constitution "absolute no-naming" isolation rules are too literal vs real host conventions — scope
+    the ban to LOGIC/BRANCHING, not comments.** The Apex Constitution §2.1/§2.2 said shared code "MUST NOT
+    name Apex" and called it "absolute". A Gate-4 Pass-1 cold reviewer flagged ~9 *comment* sites in shared
+    seams that name "Apex"; a different cold reviewer read the same code as conformant. The split was in the
+    Constitution text, not the code: the host's own shared files pervasively name C++/Python/Java/Kotlin/
+    PHP/Ruby in explanatory comments, and the rule's RFC #909 / coupling target (no per-language *branch* in
+    shared logic) was genuinely met (no `language === X`). Amended to v1.1.1: isolation = no language-specific
+    *logic/branching*; naming an example consumer in a comment is permitted. **Lesson:** an isolation/naming
+    Constitution rule should prohibit *coupling* (branches/identifiers in executable paths), not lexical
+    occurrences; "absolute" wording invites a reviewer split on comments. Sibling to #14 (over-absolute §2.2).
+
+24. **Context-free re-review cannot emit the "All prior findings resolved" PASS_FIXED phrase — it has no
+    knowledge of prior rounds, so a clean re-review yields PASS_CLEAN's "Forced to manufacture flaws".** The
+    `vsdd-adversary` skill says a clean *re-review* is PASS_FIXED ("All prior findings resolved") vs a clean
+    *first pass* is PASS_CLEAN ("Forced to manufacture flaws"). But genuine production-independence (a fresh
+    agent with no producer-session access, the §A.17 ideal) means the re-reviewer literally cannot know there
+    *were* prior findings — so it emits the PASS_CLEAN invariant even on round 8. The phrase distinction
+    assumes a *memory reset* (same reviewer, fresh window), not *production independence* (different invocation).
+    **Fix:** the gate-record verdict is determined by the GATE's history (had findings → PASS_FIXED), not the
+    reviewer's phrase; document that a context-free re-review's "Forced to manufacture flaws" maps to
+    PASS_FIXED at the record level. Reconcile §A.7's phrasing with the cold-loop independence model.
+
+25. **Fix-induced drift is real AND deep — re-review after EVERY fix, context-free, is load-bearing (extends
+    #3).** WI-2 Gate-4 Pass 1 took 8 cold rounds to converge (6→2→2→2→3→4→2→clean). Two catches justified the
+    whole loop: round 2 found an SDD §1/§2/§3 body contradiction (a superseded "USES edge" requirement) that
+    round 1 AND the Builder both missed; round 7 surfaced a REQ-008 argument-typing scope boundary that
+    reshaped work-item ownership. Each fix also exposed the next inert residue (a removed hoist exposed an
+    unused accumulation, etc.). **Lesson:** a single adversarial pass is insufficient for a large adapter diff;
+    budget for a multi-round cold loop, and never treat "the reviewer passed once" as convergence — clean
+    means a fresh reviewer round with zero legitimate findings.
+
+26. **A Gate-4 fidelity finding can reveal an inter-WI scope boundary needing explicit ownership: "deferred
+    COMPLETION, not co-ownership".** Pass 1 flagged that REQ-008's "narrow by the argument's static type"
+    was unrealized for a method-*parameter* used as an argument. The fix wasn't "build it" or "just disclose":
+    tracing the acceptance fixtures showed that typing parameter args safely requires distinguishing
+    user-defined from EXTERNAL parameter types — a capability owned by a *later* work item (external-type
+    detection). So the narrowing was specified as that later WI's **completion** of a REQ the current WI still
+    owns — mirroring how a cross-file-enabler WI completes an earlier WI's same-file mechanics. **Lesson:** the
+    decomposition/coverage-map layer needs a first-class "WI-B completes a sub-case of WI-A's REQ (needs WI-B's
+    capability), without co-owning the REQ" relationship — distinct from ownership and from a plain dependency.
+    Surfaced only because the Architect rejected a "disclose and defer" framing as lazy, forcing the trace
+    that revealed the principled boundary.
