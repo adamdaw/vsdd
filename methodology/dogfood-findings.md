@@ -107,3 +107,39 @@ Sources: `commissionCalc` (original pipeline run), **GitNexus-Apex** (first plug
     otherwise have detonated at Gate 3). Lesson for the methodology/plugin: flag host-API-heavy WIs at
     decomposition, mandate the §A.6 host-behaviour spike before SDD authoring, and expect (don't truncate)
     a long cold loop — the convergence is real, not loop thrash.
+
+### From GitNexus-Apex, WI-2 Phase 3 Step 3b / resolution implementation (2026-06-30) — NEW
+
+20. **A [Gate-3 reliance] can be found FALSE at Step 3b — clarify the spec, don't force a beyond-parity
+    capability (finding #13 recurring).** SDD-002 §2 tagged "the host reference pass emits the `USES` edge
+    to the type node" (REQ-005 type usage) as a [Gate-3 reliance], per the finding-#13 discipline. Step-3b
+    implementation evidence: NO benchmark language emits a `USES` edge for a plain declared type
+    (`Account a;`) — building one would EXCEED the stated parity target. The Architect clarified the SDD
+    (type-usage resolution = the declared type binding the variable's type, which drives receiver typing —
+    not a standalone edge) rather than build the beyond-parity capability. **Lesson:** the finding-#13
+    flag→Gate-3 mechanism works in BOTH directions — a flagged host-API behaviour can turn out to be
+    *absent* (host does less than the spec assumed), and the correct resolution is an Architect-approved SDD
+    clarification (a Phase-5 loop-back), exactly as when it turns out *present-but-different*. Bake into the
+    Gate-3/§A.11 guidance: a [Gate-3 reliance] resolving FALSE is a normal, expected outcome, not a defect.
+
+21. **A cross-cutting language capability folds through MULTIPLE independent keyspaces — enumerate them all,
+    fold symmetrically, or you get same-input-works/variant-fails bugs.** Apex case-insensitive resolution
+    needed a generic `normalizeIdentifier` seam (the §A.6 spike correctly predicted ONE seam), but the host
+    actually keys names in ≥3 INDEPENDENT places that each had to be folded symmetrically: the member
+    registries (parse-time register + resolution-time lookup), the scope-extractor's declaration bindings
+    (a separate class-name keyspace), and the scope-resolution `reconcile-ownership` re-registration (which
+    re-keys members under a different owner id). Folding only the obvious one produced a long tail of
+    partial bugs (same-case-works/case-varied-fails; split case-collisions). **Lesson for §A.6 spikes on
+    host-API-heavy seams:** the spike should trace EVERY keyspace the capability touches (not just the
+    first), and the SDD should enumerate them as the seam surface — under-counting the keyspaces is a
+    finding-#13-class miss that only surfaces at Step 3b. Identity-for-peers default keeps it NFR-002-safe.
+
+22. **Conservatism (a "leave-unresolved" REQ) lives in EVERY resolution path, not one — a single flag is
+    insufficient.** REQ-015 (Apex: undisambiguable → unresolved, never guess) had to be enforced in THREE
+    distinct host paths that each independently fell back to a best-guess first-match: receiver-bound
+    overload resolution, the free-call/implicit-`this` path (unqualified self-calls bypass the receiver
+    path entirely), and case-only member-collision. A generic `conservativeOverloadResolution` flag covered
+    two; the collision needed a separate `resolveReceiverMember` ambiguity hook. **Lesson:** when an SDD
+    pins a conservative/"degrade-not-lie" REQ, audit ALL resolution entry points for their independent
+    best-guess fallbacks — the Gate-3 fixtures should exercise each path shape (qualified vs unqualified
+    call, method vs field, exact-miss vs multi-match), or some paths ship non-conservative.
