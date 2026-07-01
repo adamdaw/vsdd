@@ -204,3 +204,49 @@ Sources: `commissionCalc` (original pipeline run), **GitNexus-Apex** (first plug
     resolution-path slice), and fuzz *that* — a template is a shape (corpus + bounded smoke-fuzz + mutation +
     purity), not a fixed target. Mutation scope likewise narrows to the WI's own decision logic (WI-1's parse
     configs were already audited at WI-1 Gate 5).
+
+28. **A host-integration / cross-file WI's SDD Gate 2 can take 15–20 cold rounds — and the loop is
+    load-bearing, not ceremony.** WI-3 (Apex cross-file binding) cleared Gate 2 after a **17-round** cold
+    context-free loop (16 rounds of findings → 1 clean; ~86 findings; finding-counts
+    7·8·7·9·6·7·6·5·7·6·9·4·4·2·2·1·clean). The core design (register the host's `populateNamespaceSiblings`
+    seam) was sound from round 1; the length came from the deep edge-case surface of import-less cross-file
+    resolution over *uncompiled* source (misfiled types, re-parented malformed fragments, duplicate names,
+    cross-language key collisions, nested-type access, trigger static/instance receivers) and the
+    verification-split rigor (every [structural] pin must trace to admitted spike evidence). **Lesson:** for a
+    WI that integrates deeply with host-API behaviour, budget many cold rounds; watch the finding-count
+    *trend* (a steady decline = convergence, not thrashing) rather than the round number. The methodology
+    should set the expectation (host-integration SDDs are Gate-2-heavy) so a Builder/Architect doesn't
+    mistake a long-but-converging loop for a stuck one, or bank early.
+
+29. **"Commit a mechanism to satisfy the SHALL — never silently de-scope" (Constitution §7 at the SDD layer).**
+    The adversary repeatedly caught cross-file completions (nested-type `Outer.Inner` access, cross-file
+    inherited members, non-exported-type resolution) being quietly left to "conservative-unresolved." But each
+    is an *unambiguous user-defined reference* a SHALL requires resolving — so leaving it unresolved is an
+    **unsanctioned requirement reduction**, distinct from legitimate conservatism-under-*ambiguity* (which
+    governs only genuinely ambiguous refs). The fix pattern that converged: every such completion carries a
+    **named committed fallback** (an Apex-local addition engaged only if its Gate-3 fixture is red), so the
+    SHALL has a satisfaction path — the SDD may not silently reduce a requirement, only the Architect via an
+    SRS amendment may. Bake the "un/ambiguous" distinction and the committed-fallback requirement into the
+    SDD-authoring + Gate-2 adversary guidance.
+
+30. **The cold loop is a check on the ARCHITECT too — and a persistent finding-stream signals over-engineering.**
+    When the Architect asked "can we check validity?" for a malformed-fragment collision, the Builder built a
+    clever parse-cleanliness *tiebreaker* (pick the clean-parsed def as winner; needed a new §2.2 seam). The
+    cold loop flagged it as **invention-beyond-parity** (Constitution §1): picking a winner is a
+    liveness-increasing heuristic with no benchmark anchor (peers don't re-parent), and it kept generating
+    downstream findings (evidence needs, framing contradictions, a §1.2-term misuse). The resolution was to
+    **revert to the simplest conservative rule** (REQ-015 inject-none + a documented §A.13 liveness
+    limitation) — which dropped the seam entirely. **Lessons:** (a) the adversary validates the *design*, not
+    just the Builder's fidelity to it — an Architect-approved "make it better" direction can itself be wrong,
+    and the loop catches it; (b) a mechanism that keeps spawning findings round after round is a smell of
+    over-engineering — prefer the simplest conservative primitive the requirement actually asks for. Permacomputing
+    "Not Doing" / parity-not-invention, operationalised by the loop.
+
+31. **A clarification ratified for one REQ may need PARALLEL ratification for a sibling REQ sharing the pattern.**
+    REQ-005 got a v1.3 clarification (a bare declared-type usage = a *binding*, not a standalone edge — parity).
+    At WI-3 Gate 2 the adversary found REQ-011's "type" arm still literally demanded a resolved edge for the
+    same bare-type-usage shape (in a trigger body) — so declining the edge there was applying a clarification
+    ratified only for REQ-005. Fix: **SRS amendment v1.4** propagating the same clarification to REQ-011.
+    **Lesson:** when an amendment clarifies a *cross-cutting behaviour* (here: how a reference *kind* resolves),
+    grep the SRS for sibling REQs that reference the same kind and ratify them together, or the gap surfaces at
+    a later WI's gate. The methodology's amendment step should prompt a sibling-REQ sweep.
