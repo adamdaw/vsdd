@@ -250,3 +250,44 @@ Sources: `commissionCalc` (original pipeline run), **GitNexus-Apex** (first plug
     **Lesson:** when an amendment clarifies a *cross-cutting behaviour* (here: how a reference *kind* resolves),
     grep the SRS for sibling REQs that reference the same kind and ratify them together, or the gap surfaces at
     a later WI's gate. The methodology's amendment step should prompt a sibling-REQ sweep.
+
+### From GitNexus-Apex, WI-3 Gates 4–6 (2026-07-06/07) — NEW
+
+32. **A clean FIRST cold pass is legitimate convergence when the implementation is byte-stable since a prior
+    cleared gate — do NOT treat "passed once" as suspect *here* (refines #25).** #25's lesson ("never treat
+    one pass as convergence; budget a multi-round cold loop") was drawn from a *large fresh adapter diff*
+    where every fix exposed the next residue. WI-3 Gate-4 Pass-1 (spec-fidelity) instead returned
+    **PASS_CLEAN on the first cold pass** — legitimately: the impl bytes had not changed since increment 15
+    (the cross-file logic cleared its earlier gates unchanged), so there was no drift for a second round to
+    find. The discriminator is **impl byte-stability**: when the reviewed artifact is unchanged since a
+    distinct reviewer last cleared it, one clean cold pass by a *different* reviewer IS termination (§A.7);
+    forcing extra rounds against a stable artifact is loop-thrash hunting phantom drift. **Fix:** the Gate-4 /
+    §A.7 termination guidance should state both directions — a *fresh/large* diff expects a multi-round cold
+    loop (#25), a *byte-stable* impl can converge on one clean cold pass — and the record should pin the impl
+    SHA so byte-stability is checkable, not asserted. Sibling to #25 (its complementary case).
+
+33. **Phase 6 (Gate 5) — the owned risk surface splits into a fuzz-reachable part and a mutation/suite-hardened
+    part; and a zero-branch plumbing file is covered transitively, not by a manufactured mutant (extends #27).**
+    #27 established "fuzz the WI's OWN owned surface, not the SECT boundary." WI-3 sharpened two sub-points:
+    - **Fuzz target = the in-process-reachable owned entry only; harden the rest by mutation + green suite +
+      purity, and say so.** WI-3's owned surface spans the capture emitter (`emitApexScopeCaptures`,
+      directly fuzz-reachable) AND seven shared resolution-pass edits that run *inside the scope-resolution
+      pipeline* — not reachable by an in-process fuzz of the capture entry. The correct move is to fuzz the
+      reachable entry (26-input adversarial corpus + bounded smoke-fuzz, seed `0x5f3ac003`) and explicitly
+      state in the pass record that the unreachable passes are hardened by the mutation audit + the full green
+      suite + the purity audit — an **honest scope statement, not a coverage gap**. A Phase-6 obligation is
+      "saturate the owned surface by the *appropriate* deterministic tool per sub-region," not "fuzz
+      everything."
+    - **A pure-threading (zero-branch) file is covered transitively — document which downstream mutant kills
+      its contribution rather than manufacturing a mutant.** 3 of WI-3's 12 files carry no independent
+      decision logic (they thread a value through). Instead of inventing a meaningless mutant, the audit
+      records that the sites they feed already kill their contribution (the normalizer thread dies with the
+      lookup mutant, the MRO-flag thread with the free-call mutant, the interface-toggle with the contract
+      mutant). This is honest scope, not a gap — a manufactured mutant on a branchless file proves nothing.
+    - **Manual mutation exception when the host ships no mutation tooling.** GitNexus has no Stryker; the
+      Constitution-designated manual audit discharges it deterministically: apply mutant → build → run the
+      WI's targeted tests → confirm killed (non-zero exit) → `git checkout` revert; the throwaway patch is
+      never committed (only the mutant table in the pass record is). The PRNG **seed is the reproducible
+      corpus** (no `Math.random`/`Date.now` — a purity requirement the audit itself must satisfy). Bake the
+      surface-split + transitive-coverage + no-tooling-manual-exception shapes into the Phase-6 / Gate-5
+      guidance.
