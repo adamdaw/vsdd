@@ -1,0 +1,20 @@
+{
+  "name": "vsdd",
+  "description": "Verified Spec-Driven Development — the enforcement plugin co-located with the methodology",
+  "owner": {
+    "name": "Adam Daw",
+    "email": "adam@adamdaw.com"
+  },
+  "plugins": [
+    {
+      "name": "vsdd",
+      "description": "Enforces the VSDD pipeline: per-phase skills, a state-driven hard-gate hook, and restricted reviewer agents",
+      "version": "0.1.0",
+      "source": "./plugin",
+      "author": {
+        "name": "Adam Daw",
+        "email": "adam@adamdaw.com"
+      }
+    }
+  ]
+}

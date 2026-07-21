@@ -1,0 +1,21 @@
+{
+  "name": "vsdd",
+  "description": "Verified Spec-Driven Development pipeline enforcement: 7 per-phase skills, a state-driven PreToolUse hard-gate hook, and restricted adversarial reviewer agents. Built against the converged methodology in this repo.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Adam Daw",
+    "email": "adam@adamdaw.com"
+  },
+  "homepage": "https://github.com/adamdaw/vsdd",
+  "repository": "https://github.com/adamdaw/vsdd",
+  "license": "MIT",
+  "keywords": [
+    "vsdd",
+    "spec-driven-development",
+    "tdd",
+    "verification",
+    "adversarial-review",
+    "gates",
+    "methodology"
+  ]
+}
