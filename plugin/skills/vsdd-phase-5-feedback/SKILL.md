@@ -9,7 +9,7 @@ description: >
 
 # Phase 5 — Feedback Integration Loop (no gate)
 
-The Adversary's critique feeds back through the whole pipeline. This phase has **no gate** — it routes fixes and re-arms the gates they touch. See `methodology/VSDD.md` Phase 5 and §A.7 (lineage check), §A.13/§A.16 (limitation / non-converged release).
+The Adversary's critique feeds back through the whole pipeline. This phase has **no gate** — it routes fixes and re-arms the gates they touch. It is **not an end-phase**: invoke it *whenever* a finding must be integrated, at any phase, for any work item — never a step that waits for all work items (that is Phase 7). "Route to the owning phase + cascade-invalidate" *is* the in-loop loop-back. See `methodology/VSDD.md` Phase 5 and §A.7 (lineage check), §A.13/§A.16 (limitation / non-converged release).
 
 ## Routing table
 
@@ -41,6 +41,8 @@ After integrating each accepted finding, run the full suite. If a prior passing 
 ## Loop termination — 3-cycle architectural escalation
 
 A *cycle* is one return-and-re-review of a given ITEM-NNN / REQ-NNN / SEC-NNN. Counting is **per affected identifier** (§A.8). If any single identifier reaches **three failed cycles**, stop fixing — the spec or architecture is wrong, not the implementation. Escalate to the Architect, who revises the spec, revises the architecture, or de-scopes. A fourth blind fix attempt is almost always slower and wrong.
+
+The loop checks the **Architect** too: an Architect-approved "make it better" direction can itself be over-engineering (a liveness-increasing heuristic with no requirement anchor — invention beyond parity). A mechanism that keeps spawning findings round after round is the smell — revert the cleverness for the simplest conservative primitive the requirement asks for, don't keep patching it. A scope-affecting **disposition** is not self-certifying — re-run the cold adversary on its artifacts together (SRS+SDD) after it, not only after a code fix (§A.8).
 
 **Not every gap can be "accepted":** a derivation-fidelity gap is always fixed (or de-scoped — itself a fix to the SRS), never shipped as a limitation; a CSDD MUST violation is fixed or compliance-verified. The §A.13 Documented-Limitation route is reserved for an undischarged Prove property blocked by external tooling limits — and only via §A.16.
 

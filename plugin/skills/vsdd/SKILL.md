@@ -34,7 +34,7 @@ Gates are enforced by a **PreToolUse hook** (`gate-check.js`), not by convention
 ```
 
 - `gates_passed` is the only field the hook reads (source unlocks when it contains `3`).
-- `artifacts` lists the files each gate requires; `/vsdd-advance` refuses to clear a gate whose listed artifacts are missing or empty. Edit this map if your layout differs (a trailing `/` means "directory with a non-empty file").
+- `artifacts` lists the files each gate requires; `/vsdd-advance` refuses to clear a gate whose listed artifacts are missing or empty. Edit this map if your layout differs (a trailing `/` means "directory with a non-empty file"). The default map is **greenfield-shaped**; a **brownfield** project (a fork, or adding a capability to an existing host) almost always needs custom artifact paths — hand-edit the map to point at where the SRS/SDD/tests actually live before advancing.
 
 **Setup:** `/vsdd-init [project-name]` — writes `.vsdd/state.json`. (The hook ships with the plugin; no per-project hook registration is needed.)
 
@@ -61,7 +61,7 @@ Drive each with its per-phase skill. The gate's review is real work; `/vsdd-adva
 | 2 — Spec Crystallization | `vsdd-phase-2-spec` | **Gate 2** — SDD vs SRS |
 | 3 — Test Gen & TDD Impl | `vsdd-phase-3-tests-impl` | **Gate 3** — Tests vs Spec (before impl); then implement |
 | 4 — Adversarial Refinement | `vsdd-phase-4-adversarial` | **Gate 4** — Impl vs Spec+Tests (Pass 1) + Code Quality (Pass 2) |
-| 5 — Feedback Integration | `vsdd-phase-5-feedback` | (no gate) — route fixes to owning phase; cascade-invalidate |
+| 5 — Feedback Integration | `vsdd-phase-5-feedback` | (no gate) — route fixes to owning phase; cascade-invalidate. Always-on, invoked whenever a finding must be integrated — not an end-phase that waits for all work items (that is Phase 7). |
 | 6 — Formal Hardening | `vsdd-phase-6-hardening` | **Gate 5** — proofs, fuzz, mutation, hardening, purity |
 | 7 — Convergence | `vsdd-phase-7-convergence` | (no gate) — deterministic roll-up; exit signal |
 
