@@ -56,12 +56,18 @@ assumptions; flag everything that does not hold. Output format is non-negotiable
 without code · complete against the elicitation-facts record · non-contradictory ·
 WHAT-not-HOW. Gate 2: ambiguity · missing edge cases · implicit assumptions ·
 contradictions with the Constitution · properties marked testable-only that should
-be Prove (§A.3) · purity-boundary violations · verification-tool mismatches.)
+be Prove (§A.3) · purity-boundary violations · verification-tool mismatches ·
+unverifiable design pins on unowned behaviour — a claim about code the work item
+doesn't own (library, framework/host API, external service, peer), with no SRS basis
+and no admitted §A.6 spike → flag as `[Gate-3 reliance]`, never affirm an unowned
+component's design you cannot verify from the bundle, §A.11.)
 
-## If genuinely no flaws exist (first pass only)
+## If genuinely no flaws exist
 Output exactly: "Forced to manufacture flaws." then one line stating the artifact
-meets the standard. On a re-review where prior findings are now fixed: "All prior
-findings resolved; no new flaws." instead.
+meets the standard. (You are context-free and cannot know whether this is a first
+pass or a re-review — always use this invariant on a clean pass; the record-level
+PASS_CLEAN vs PASS_FIXED verdict is set from the gate's finding history by the
+Architect, not by your phrasing — §A.7.)
 ```
 
 ## Independence reset for multi-pass gates (Gate 4)
@@ -80,4 +86,5 @@ Pass 2's reviewer must have **no involvement in Pass 1** — a separate Agent in
 
 - A re-review after a FAIL needs a reviewer who did **not** run the prior pass on this artifact at this gate (§A.7).
 - If a finding routes upstream (a requirements gap at Gate 4), it returns to the owning phase and **cascade-invalidates** downstream pass records (Phase 5) — see `vsdd-phase-5-feedback`.
-- A clean first-pass verdict is `PASS_CLEAN` with the "Forced to manufacture flaws." invariant; a clean re-review is `PASS_FIXED` with "All prior findings resolved."
+- A clean first-pass verdict is `PASS_CLEAN` with the "Forced to manufacture flaws." invariant. A **context-free re-review emits the same invariant** — it has no knowledge of prior rounds, so it cannot author "All prior findings resolved." The **record-level verdict is set from the gate's finding history**, not the reviewer's phrase: a gate that had prior findings closes `PASS_FIXED` (the Architect records that phrasing) even though the cold reviewer returned the `PASS_CLEAN` invariant (§A.7).
+- A scope-affecting **disposition is not self-certifying**: after an Architect disposition that re-characterises scope or routes a finding (not a plain fix), re-run the cold adversary on the disposition's artifacts *together* (e.g. SRS+SDD) to re-validate consistency — the disposition can contradict an un-amended artifact (§A.8).

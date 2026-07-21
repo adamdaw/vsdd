@@ -29,6 +29,8 @@ Translate the spec directly into executable tests:
 
 Use the `vsdd-test-validator` agent (via `vsdd-adversary`, Gate 3). With the suite written and red, it reviews tests against the spec + the Red-Gate evidence: every contract item and `automated` Gherkin scenario maps to an executable test; `environment-visible` / `person-confirmed` scenarios map to a `planned` manual-acceptance record (§A.10); no test is tautological or over-mocked; the Red Gate holds; and — where capability scaffolding was used — every `// vsdd:scaffold`-tagged edit is genuinely non-functional (greens no target test), per the scaffold ledger. Findings are **fixed-only** and return to Step 3a (tests) or Phase 2 (spec).
 
+A **conservative / degrade-don't-lie** requirement ("when ambiguous, leave unresolved — never guess") must be enforced at **every** independent code path that could fall back to a best guess, not one — so fixtures exercise each path shape (qualified vs unqualified, exact-miss vs multi-match). A single flag on the obvious path ships the others non-conservative.
+
 **Clear the gate:** commit the Gate 3 pass record, then `/vsdd-advance`. This unlocks implementation source.
 
 ## Step 3b — Minimal Implementation (now unlocked)

@@ -17,6 +17,7 @@ With an approved SRS, the Builder produces a **Software Design Document (SDD)** 
 - **Interface definition:** input/output/error types, unambiguous (OpenAPI/GraphQL schema or type signature + doc contract).
 - **Edge-case catalog:** walk the per-input-type checklist — null, empty, boundary/max, negative/out-of-range, malformed/encoding, concurrent. An edge case first surfaced here is written back to the SRS as a versioned addendum (new REQ-NNN) that re-enters Gate 1 before Phase 2 continues.
 - **NFRs:** performance/memory/security bounds baked in.
+- **External / unowned-component reliances:** every behavioural claim about code the WI doesn't own (third-party library, framework or host API, external service, peer module, runtime) that the Gate-2 Adversary can't verify from the bundle is marked **`[Gate-3 reliance]`** — traced to the SRS or an admitted §A.6 spike, never asserted as a design pin. A SHALL depending on one carries a **named committed fallback** (engaged iff its Gate-3 fixture is red). A reliance resolving **FALSE** at Gate 3 (host does less/other than assumed) is a normal Phase-5 clarification, not a defect. Leaving an *unambiguous* required reference unresolved is a `fidelity` finding; leaving a *genuinely ambiguous* one unresolved is legitimate conservatism (§A.11).
 - **Security clauses (security-critical CWE surfaces):** author `SEC-NNN` instances (§A.1) applying the Constitution's `SECT-NNN` templates — CWE ref, MUST/SHOULD/MAY, safe pattern, enforcement mechanism + owning gate, verification reference. A live CWE surface with no active template **fails Gate 2** until the Architect adds the template by amendment. A financial-only critical item with no CWE surface authors no clause (but carries §A.3 proof duties).
 
 ## Step 2b — Verification Architecture (Architect-approved proposal)
@@ -30,7 +31,7 @@ The purity boundary and tooling are **architectural** — the Builder proposes; 
 
 ## Step 2c — Gate 2 — Spec Fidelity
 
-Use `vsdd-adversary` (Gate 2). The Adversary receives the approved SRS, the Constitution, and the SDD (plus any §A.6 result) — no deliberation, no ADRs. It hunts: ambiguity, missing edge cases, implicit assumptions, internal contradictions, **contradictions with the Constitution** (remedy is an amendment, never a silent exception), properties marked testable-only that should be Prove, purity-boundary violations, verification-tool mismatches.
+Use `vsdd-adversary` (Gate 2). The Adversary receives the approved SRS, the Constitution, and the SDD (plus any §A.6 result) — no deliberation, no ADRs. It hunts: ambiguity, missing edge cases, implicit assumptions, internal contradictions, **contradictions with the Constitution** (remedy is an amendment, never a silent exception), properties marked testable-only that should be Prove, purity-boundary violations, verification-tool mismatches, **unverifiable design pins on unowned behaviour** (a claim about code the WI doesn't own, no SRS basis / no §A.6 spike → flag `[Gate-3 reliance]`, never affirm — §A.11). Externally-dependent items run a mandatory §A.6 external-behaviour spike first and take a long cold loop (read the finding-count trend, not the round number).
 
 Findings are **fixed-only**. Iterate until no legitimate holes remain; the Architect signs off.
 
