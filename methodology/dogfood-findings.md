@@ -6,7 +6,8 @@ move to `CHANGELOG.md` [Unreleased]; this file holds the index of what folded wh
 **pending**, and any limitation a finding folded *with* rather than closed. Nothing is pending as of
 2026-09-22.
 
-Sources: `commissionCalc` (original pipeline run), **GitNexus-Apex** (first plugin dogfood — `~/Projects/Home/gitnexus/.vsdd/HANDOFF.md`).
+Sources: a private Salesforce project (the original pipeline run, before the plugin existed), and
+**GitNexus-Apex** (the first plugin dogfood — adding an Apex parser to a fork of a code-graph tool).
 
 ## Folded (see CHANGELOG [Unreleased])
 
