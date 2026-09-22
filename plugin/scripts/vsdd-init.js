@@ -19,6 +19,15 @@ const DEFAULT_ARTIFACTS = {
   5: [".vsdd/pass-records/gate5.md"],
 };
 
+// The §A.17 evidence layout the reviewer-bundle assembler applies. Written into
+// state.json so the admitted/withheld split is visible and auditable rather than
+// hidden in the tool. "admitted" adds objective evidence beyond the gate's own
+// artifacts; a trailing "/" means the whole subtree.
+const DEFAULT_EVIDENCE = {
+  admitted: [],
+  withheld: [".vsdd/adr/", ".vsdd/sessions/", ".vsdd/research/", ".vsdd/HANDOFF.md"],
+};
+
 function main() {
   const force = process.argv.includes("--force");
   const name =
@@ -38,6 +47,7 @@ function main() {
     phase: 1,
     gates_passed: [],
     artifacts: DEFAULT_ARTIFACTS,
+    evidence: DEFAULT_EVIDENCE,
   };
 
   fs.mkdirSync(path.join(dir, "sessions"), { recursive: true });

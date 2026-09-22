@@ -89,6 +89,75 @@ function treeUsesScaffolding(dir) {
   return false;
 }
 
+// --- Epics (multi-work-item projects) --------------------------------------
+// `state.items` is OPTIONAL and everything here is inert without it: a
+// standalone work item has no parent epic and no decomposition checkpoint
+// (§A.9), and runs Gates 1-5 itself exactly as it always has.
+//
+// With `items`, the project clears Gate 1 once — the epic SRS *and* the
+// decomposition checkpoint — and each work item then runs Gates 2-5 on its own,
+// routed by the dependency DAG. Clearing an item's Gate 5 finishes that item,
+// not the epic; Phase 7 is reached only when every item is done.
+
+// ponytail: conventional .vsdd-relative paths, named in the error message so
+// they are discoverable. The plugin already fixes .vsdd/pass-records/.
+const DECOMPOSITION_ARTIFACTS = [
+  ".vsdd/work-items.md",
+  ".vsdd/pass-records/gate1-decomposition.md",
+];
+
+const gatesOf = (o) => (Array.isArray(o.gates_passed) ? o.gates_passed : []);
+const isDone = (it) => it.phase === "done";
+
+function assertAcyclic(items) {
+  const mark = new Map(); // id -> 1 visiting, 2 finished
+  const visit = (id, trail) => {
+    if (mark.get(id) === 2) return;
+    if (mark.get(id) === 1) {
+      console.error(`Work-item dependency cycle: ${[...trail, id].join(" -> ")}`);
+      console.error(`A decomposition's dependency graph must be acyclic (§A.9).`);
+      process.exit(1);
+    }
+    mark.set(id, 1);
+    for (const dep of items[id].deps || []) {
+      if (!items[dep]) {
+        console.error(`Work item ${id} depends on unknown item "${dep}".`);
+        process.exit(1);
+      }
+      visit(dep, [...trail, id]);
+    }
+    mark.set(id, 2);
+  };
+  for (const id of Object.keys(items)) visit(id, []);
+}
+
+function readyItems(items) {
+  return Object.keys(items).filter(
+    (id) => !isDone(items[id]) && (items[id].deps || []).every((d) => isDone(items[d]))
+  );
+}
+
+// Point the project at the next item the DAG unblocks. Mutates state; returns
+// the line to print.
+function routeNext(state, items) {
+  const ready = readyItems(items);
+  if (!ready.length) {
+    state.active_item = null;
+    state.phase = 7;
+    return `  All work items done. Next: commit the Phase 7 epic convergence roll-up.`;
+  }
+  if (ready.length > 1) {
+    state.active_item = null;
+    return (
+      `  Ready (dependencies met): ${ready.join(", ")}.\n` +
+      `  The DAG gates parallelism, it does not choose order — set "active_item" in .vsdd/state.json.`
+    );
+  }
+  state.active_item = ready[0];
+  items[ready[0]].phase = 2;
+  return `  Next work item: ${ready[0]} — phase 2 (author its SDD).`;
+}
+
 function main() {
   const file = findStateFile(process.cwd());
   if (!file) {
@@ -97,15 +166,39 @@ function main() {
   }
   const root = path.dirname(path.dirname(file));
   const state = JSON.parse(fs.readFileSync(file, "utf8"));
-  const passed = Array.isArray(state.gates_passed) ? state.gates_passed : [];
-  const nextGate = (passed.length ? Math.max(...passed) : 0) + 1;
+
+  const items = state.items && Object.keys(state.items).length ? state.items : null;
+  if (items) assertAcyclic(items);
+
+  // The epic's own Gate 1 comes first; only then do items advance.
+  const itemId = items && gatesOf(state).includes(1) ? state.active_item : null;
+  if (items && gatesOf(state).includes(1) && !items[itemId]) {
+    const ready = readyItems(items);
+    console.error(`No active work item. Set "active_item" in .vsdd/state.json to one of:`);
+    console.error(`  ${ready.length ? ready.join(", ") : "(none ready — every item is done)"}`);
+    process.exit(1);
+  }
+  const target = itemId ? items[itemId] : state;
+  const passed = gatesOf(target);
+  const nextGate = (passed.length ? Math.max(...passed) : itemId ? 1 : 0) + 1;
 
   if (nextGate > 5) {
-    console.log("All five gates cleared. Proceed to Phase 7 convergence roll-up.");
+    console.log(
+      itemId
+        ? `${itemId} has cleared all its gates. Set "active_item" to the next item.`
+        : "All five gates cleared. Proceed to Phase 7 convergence roll-up."
+    );
     process.exit(0);
   }
 
-  const required = (state.artifacts && state.artifacts[nextGate]) || [];
+  // An item may override the epic's artifact paths per gate (SDD-002.md rather
+  // than SDD.md); absent an override the epic-level list applies.
+  let required =
+    (target.artifacts && target.artifacts[nextGate]) ||
+    (itemId && state.artifacts && state.artifacts[nextGate]) ||
+    [];
+  // An epic's Gate 1 is also the decomposition checkpoint (§A.9, finding #5).
+  if (items && !itemId && nextGate === 1) required = [...required, ...DECOMPOSITION_ARTIFACTS];
   const missing = required.filter((spec) => !satisfied(root, spec));
   if (missing.length) {
     console.error(`Cannot clear ${GATE_NAME[nextGate]}: required artifacts missing or empty:`);
@@ -122,14 +215,26 @@ function main() {
     process.exit(1);
   }
 
-  state.gates_passed = [...passed, nextGate];
-  state.phase = NEXT_PHASE[nextGate];
+  target.gates_passed = [...passed, nextGate];
+  target.phase = NEXT_PHASE[nextGate];
+
+  // Routing happens at two points only: when the epic's Gate 1 opens the first
+  // item, and when an item's Gate 5 finishes it.
+  let routed = "";
+  if (itemId && nextGate === 5) {
+    target.phase = "done";
+    routed = routeNext(state, items);
+  } else if (items && !itemId && nextGate === 1) {
+    routed = routeNext(state, items);
+  }
+
   fs.writeFileSync(file, JSON.stringify(state, null, 2) + "\n");
 
-  console.log(`Cleared ${GATE_NAME[nextGate]}.`);
-  console.log(`  gates_passed = [${state.gates_passed.join(", ")}]  phase = ${state.phase}`);
+  console.log(`Cleared ${GATE_NAME[nextGate]}${itemId ? ` for ${itemId}` : ""}.`);
+  console.log(`  gates_passed = [${target.gates_passed.join(", ")}]  phase = ${target.phase}`);
   if (nextGate === 3) console.log(`  Implementation source is now UNLOCKED.`);
-  if (nextGate === 5) console.log(`  Next: commit the Phase 7 convergence roll-up record.`);
+  if (routed) console.log(routed);
+  if (nextGate === 5 && !items) console.log(`  Next: commit the Phase 7 convergence roll-up record.`);
 }
 
 main();

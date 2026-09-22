@@ -36,4 +36,28 @@ assert.equal(decide("/elsewhere/x.js", noGates).block, false);
 assert.equal(decide(abs("src/lang.ts"), noGates, false).block, true);
 assert.equal(decide(abs("src/lang.ts"), noGates, true).block, false); // // vsdd:scaffold edit allowed
 
+// (f) epics: the unlock is the ACTIVE work item's gates, not the project's.
+// The project clears Gate 1 only, so reading project gates would lock source forever.
+const epic = (activeGates) => ({
+  root: ROOT,
+  state: {
+    phase: 2,
+    gates_passed: [1],
+    active_item: "ITEM-002",
+    items: {
+      "ITEM-001": { phase: "done", gates_passed: [2, 3, 4, 5] },
+      "ITEM-002": { phase: 3, gates_passed: activeGates },
+    },
+  },
+});
+assert.equal(decide(abs("src/app.js"), epic([2])).block, true); // active item pre-Gate-3
+assert.equal(decide(abs("src/app.js"), epic([2, 3])).block, false); // active item cleared Gate 3
+// a DONE sibling's cleared Gate 3 must not unlock source for the active item
+assert.match(decide(abs("src/app.js"), epic([2])).reason, /ITEM-002 is at phase 3/);
+// no active_item -> fall back to the project's gates (unchanged behaviour)
+assert.equal(
+  decide(abs("src/app.js"), { root: ROOT, state: { phase: 2, gates_passed: [1, 2, 3], items: {} } }).block,
+  false
+);
+
 console.log("gate-check: all assertions passed");
