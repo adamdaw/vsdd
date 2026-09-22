@@ -33,12 +33,32 @@ Gates are enforced by a **PreToolUse hook** (`gate-check.js`), not by convention
 }
 ```
 
-- `gates_passed` is the only field the hook reads (source unlocks when it contains `3`).
+- `gates_passed` is the only field the hook reads (source unlocks when it contains `3`) — in an epic, the **active item's** `gates_passed`.
 - `artifacts` lists the files each gate requires; `/vsdd-advance` refuses to clear a gate whose listed artifacts are missing or empty. Edit this map if your layout differs (a trailing `/` means "directory with a non-empty file"). The default map is **greenfield-shaped**; a **brownfield** project (a fork, or adding a capability to an existing host) almost always needs custom artifact paths — hand-edit the map to point at where the SRS/SDD/tests actually live before advancing.
+- `evidence` declares the §A.17 admitted/withheld path split the reviewer-bundle assembler applies. Defaults withhold `.vsdd/adr/`, `.vsdd/sessions/`, `.vsdd/research/`, `.vsdd/HANDOFF.md`.
+
+### Epics (more than one work item)
+
+A **standalone** work item has no parent epic and needs none of this. For an epic, hand-add `items` and `active_item` at the Phase 1 decomposition bridge (§A.9):
+
+```json
+"active_item": "ITEM-001",
+"items": {
+  "ITEM-001": { "phase": 1, "gates_passed": [], "deps": [],
+                "artifacts": { "2": [".vsdd/SDD-001.md"], "3": ["tests/one/"] } },
+  "ITEM-002": { "phase": 1, "gates_passed": [], "deps": ["ITEM-001"] }
+}
+```
+
+The **project** clears Gate 1 once — the epic SRS *and* the decomposition checkpoint, which additionally requires `.vsdd/work-items.md` and `.vsdd/pass-records/gate1-decomposition.md`. Each item then runs **Gates 2–5** on its own; an item entering work starts at phase 2, since its light-SRS slice came out of decomposition. Per-item `artifacts` override the epic's map per gate; anything not overridden falls back to it.
+
+Clearing an item's Gate 5 finishes **that item**, not the epic: `/vsdd-advance` marks it `done` and routes to the next item whose `deps` are all done. Phase 7 and the convergence roll-up are reached only when every item is done. If two items are ready at once the command names both and stops — the DAG gates parallelism, it does not choose order; set `active_item` yourself. A dependency cycle is refused outright (§A.9).
 
 **Setup:** `/vsdd-init [project-name]` — writes `.vsdd/state.json`. (The hook ships with the plugin; no per-project hook registration is needed.)
 
 **Advance:** `/vsdd-advance` — clears the next gate (after its review actually passed) and advances the phase. It records the gate as cleared; it does **not** perform the review. The review is driven by the per-phase skill and, for Gates 1–4, the reviewer agents.
+
+**Bundle:** `/vsdd-bundle <gate> [ITEM-NNN]` — exports the Adversary's admitted-only workspace and its manifest before a Gate 1–4 review (§A.17). See `vsdd-adversary` for the limit on what it can isolate.
 
 ## Roles (5Cs in §II of the methodology)
 

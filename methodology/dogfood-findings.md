@@ -2,7 +2,9 @@
 
 Findings surfaced by dogfooding the methodology + plugin on real projects, tracked until folded into
 the methodology (`VSDD.md` / `appendix-a-schemas.md`) and/or the plugin (`plugin/`). **Folded** findings
-move to `CHANGELOG.md` [Unreleased]; this file holds what is still **pending**.
+move to `CHANGELOG.md` [Unreleased]; this file holds the index of what folded where, anything still
+**pending**, and any limitation a finding folded *with* rather than closed. Nothing is pending as of
+2026-09-22.
 
 Sources: `commissionCalc` (original pipeline run), **GitNexus-Apex** (first plugin dogfood — `~/Projects/Home/gitnexus/.vsdd/HANDOFF.md`).
 
@@ -41,33 +43,24 @@ Methodology + skill text, folded 2026-07-21 unless noted:
 - **#31** — amendment step sweeps the SRS/SDD for sibling REQs sharing a cross-cutting clarification → §A.2.
 - **#1** — brownfield `vsdd-init` artifact map needs hand-editing (documented) → `vsdd` skill.
 
-## Pending — plugin enforcement (needs a design decision)
+Plugin enforcement, folded 2026-09-22 in one design pass:
 
-The **methodology** side of each of these is folded; what remains is **plugin enforcement** — the plugin's
-state machine and reviewer-sandbox do not yet *mechanically* enforce what the methodology now specifies.
-This is a coherent design pass on the plugin, deferred pending Architect decisions on how much to build.
+- **#8 / #9** — per-work-item phases/gates and the dependency DAG in `state.json` (`items`,
+  `active_item`); an item's Gate 5 finishes the item and routes to the next ready one, and Phase 7
+  gates on all items → `vsdd-advance`, `gate-check.js`, `vsdd` skill.
+- **#5** — an epic's Gate 1 requires `work-items.md` + a committed decomposition-checkpoint pass
+  record → `vsdd-advance`, `vsdd-phase-1-requirements`.
+- **#2** — the admitted-only reviewer workspace is exported by tool, with a committed manifest and a
+  leak check that destroys a tainted bundle → `/vsdd-bundle`, `vsdd-adversary`. **Folded with a
+  limitation, not closed:** see below.
 
-- **#2 — Reviewer evidence-isolation is a real sandbox in the methodology (§A.17) but instruction-based in
-  the plugin.** `vsdd-adversary` tells the operator to "read the admitted files yourself, then pass their
-  paths/contents to the reviewer" — it does not *export an admitted-only workspace* with the withheld paths
-  absent/access-denied. Decision: build a genuine sandbox export (worktree/checkout/archive of admitted
-  paths only) the adversary agent runs against, vs. keep the instruction-based bundle.
+## Open limitation
 
-- **#5 — Decomposition checkpoint is unenforced in `vsdd-advance`.** The methodology gates the epic →
-  work-item decomposition at a Gate-1 checkpoint (§A.7, §A.9); the plugin does not require the work-items
-  artifact + a committed decomposition-checkpoint pass record before an item leaves Phase 1. Enforcing it
-  depends on the plugin modelling epics at all (see #8/#9).
-
-- **#8 — The project-level state machine emits a *wrong action* on multi-WI epics.** Advancing past the
-  first work item's Gate 5 sets the project to `phase 7` and prompts for the epic convergence roll-up —
-  false epic-convergence when only WI-1's vertical is done. The correct behaviour: in a multi-WI epic,
-  advancing past a WI's Gate 5 routes to the next WI's Phase 2 per the `work-items.md` DAG; Phase 7 gates on
-  ALL WIs cleared. (`state.json` currently models one project-level phase, not per-WI phases/gates.)
-
-- **#9 — Epic execution is DAG-driven, not a binary mode.** Per-item/vertical vs batched/horizontal vs a
-  combination, Architect-selectable per epic and per subgraph, driven by which risk dominates where. The
-  state machine must model per-item phase/gates AND the dependency edges that gate parallelism.
-
-**#8 and #9 are the same decision:** whether (and how far) to make the plugin's `.vsdd/state.json` +
-`vsdd-advance` model per-work-item phases/gates and the dependency DAG. #5's enforcement and #2's sandbox
-are the two other plugin-build decisions. All four are deferred to an Architect design pass, not folded.
+**AI reviewer evidence isolation is partial (#2).** §A.17 requires the withheld paths to be *absent or
+access-denied* in the workspace the Adversary can reach. `/vsdd-bundle` exports an admitted-only
+workspace and proves the export excluded the withheld paths, which discharges §A.17 for a **human**
+reviewer and gives every gate an auditable manifest. It does not discharge it for an **AI** reviewer: a
+subagent shares the filesystem and can read withheld repository paths regardless of its prompt or its
+working directory, and the harness offers no way to deny that. Closing this needs a sandbox the
+reviewer cannot read around — a container, or a harness that can restrict a subagent's file access.
+Until then a gate's pass record should state that its isolation was bundle-and-prompt, not enforced.

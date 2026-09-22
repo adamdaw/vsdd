@@ -31,7 +31,9 @@ Before spawning, identify the **admitted** vs **withheld** paths:
 - **Admitted:** the source artifact, the derived artifact under review, the standing governing artifact it must not contradict (Constitution), and the *objective* gate evidence the verdict needs (test-run output, scanner results, prior **finding/disposition records with the rationale field redacted**, §A.8).
 - **Withheld (never pass these):** deliberation record, ADR log, handoff notes/session logs, research *rationale* (§A.6), and any prior-review *narrative*.
 
-Read the admitted files yourself, then pass their paths/contents to the reviewer. Record what the bundle contained (a manifest or its hash) for the pass record.
+Run **`/vsdd-bundle <gate> [ITEM-NNN]`** (`scripts/vsdd-bundle.js`). It exports the admitted paths into an isolated workspace outside the repository, refuses and destroys the bundle if any withheld path reached it, and writes the manifest — admitted paths with SHA-256s, and the withheld rules applied — both into the workspace and to `.vsdd/pass-records/gate<N>-bundle-manifest.txt` for committing with the pass record (§A.17 enforcement). The admitted/withheld path rules live in `state.json` under `evidence`; edit them there, never by looking away.
+
+Spawn the reviewer against the **exported workspace path**, not the repository.
 
 ## Spawning the reviewer
 
@@ -84,6 +86,7 @@ Pass 2's reviewer must have **no involvement in Pass 1** — a separate Agent in
 
 ## Gotchas
 
+- **Evidence isolation is partial for an AI reviewer, and the gap is not closed by the bundle.** The export gives a *human* reviewer the §A.17 workspace and gives every gate an auditable manifest — but a subagent shares this filesystem and can read the withheld repository paths regardless of what its prompt contains. Curating the prompt and exporting the bundle are both necessary and still not sufficient here. Record the limit in the pass record rather than claiming isolation the harness cannot provide.
 - A re-review after a FAIL needs a reviewer who did **not** run the prior pass on this artifact at this gate (§A.7).
 - If a finding routes upstream (a requirements gap at Gate 4), it returns to the owning phase and **cascade-invalidates** downstream pass records (Phase 5) — see `vsdd-phase-5-feedback`.
 - A clean first-pass verdict is `PASS_CLEAN` with the "Forced to manufacture flaws." invariant. A **context-free re-review emits the same invariant** — it has no knowledge of prior rounds, so it cannot author "All prior findings resolved." The **record-level verdict is set from the gate's finding history**, not the reviewer's phrase: a gate that had prior findings closes `PASS_FIXED` (the Architect records that phrasing) even though the cold reviewer returned the `PASS_CLEAN` invariant (§A.7).

@@ -75,16 +75,21 @@ function decide(filePath, found, scaffold) {
   const rel = path.relative(found.root, filePath);
   if (rel.startsWith("..")) return { block: false }; // outside the project
   if (classify(rel) === "artifact") return { block: false };
-  const passed = Array.isArray(found.state.gates_passed) ? found.state.gates_passed : [];
+  // In an epic, Gate 3 is cleared per work item — the project itself only ever
+  // clears Gate 1 — so the unlock is the ACTIVE item's gates, not the project's.
+  const s = found.state;
+  const active = s.items && s.active_item ? s.items[s.active_item] : null;
+  const scope = active || s;
+  const passed = Array.isArray(scope.gates_passed) ? scope.gates_passed : [];
   if (passed.includes(3)) return { block: false };
   if (scaffold) return { block: false }; // tagged scaffolding — verified at Gate 3
-  const phase = found.state.phase ?? "?";
+  const phase = scope.phase ?? "?";
   return {
     block: true,
     reason:
       `VSDD gate: implementation source is locked.\n` +
       `  ${rel}\n` +
-      `Project is at phase ${phase}; Gate 3 (Tests vs Spec) is not yet cleared ` +
+      `${active ? s.active_item : "Project"} is at phase ${phase}; Gate 3 (Tests vs Spec) is not yet cleared ` +
       `(gates_passed = [${passed.join(", ")}]).\n` +
       `Write the spec and the failing tests first. Once Gate 3 passes, clear it with /vsdd-advance ` +
       `to unlock implementation. (Markdown, tests, and .vsdd/ are never blocked.)`,

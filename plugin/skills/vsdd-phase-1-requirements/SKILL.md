@@ -42,3 +42,5 @@ Findings are **fixed-only** (derivation fidelity — never signed off). Iterate 
 ## Clearing the gate
 
 Commit the Gate 1 pass record(s) (§A.7) to `.vsdd/pass-records/`, then run `/vsdd-advance` → Phase 2. No technical spec authorship begins until Gate 1 is cleared.
+
+**For an epic**, `/vsdd-advance` additionally requires `.vsdd/work-items.md` and the decomposition checkpoint's own pass record at `.vsdd/pass-records/gate1-decomposition.md` — the checkpoint is a gate, not a note, and no item leaves Phase 1 without it. Add `items` and `active_item` to `.vsdd/state.json` at this point (see the `vsdd` skill); clearing the epic's Gate 1 then opens the first item at phase 2.
